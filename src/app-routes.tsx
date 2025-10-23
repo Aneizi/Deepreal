@@ -1,8 +1,8 @@
 import { useRoutes } from 'react-router'
 import { lazy } from 'react'
-import AccountView from '@/components/account-view.tsx'
 
 const Dropzone = lazy(() => import('@/components/dropzone.tsx'))
+const AccountView = lazy(() => import('@/components/account-view.tsx'))
 const AccountDetailFeature = lazy(() => import('@/features/account/account-feature-detail.tsx'))
 const AccountIndexFeature = lazy(() => import('@/features/account/account-feature-index.tsx'))
 
@@ -11,7 +11,9 @@ export function AppRoutes() {
     { index: true, element: <Dropzone />},
     {
       path: 'view',
-      element: <AccountView/>
+      children: [
+        {index: true, element: <AccountView/>}
+      ]
     },
     {
       path: 'account',

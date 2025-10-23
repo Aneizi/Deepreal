@@ -2,7 +2,7 @@ import { useRoutes } from 'react-router'
 import { lazy } from 'react'
 import AccountView from '@/components/account-view.tsx'
 
-const Dropzone = lazy(() => import('@/components/dropzone.tsx'))
+const Dropzone = lazy(() => import('@/components/dropzone'))
 const AccountDetailFeature = lazy(() => import('@/features/account/account-feature-detail.tsx'))
 const AccountIndexFeature = lazy(() => import('@/features/account/account-feature-index.tsx'))
 

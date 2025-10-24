@@ -1,17 +1,28 @@
 import { Address } from 'gill'
 import { RefreshCw } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { ellipsify } from '@/lib/utils'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AppExplorerLink } from '@/components/app-explorer-link'
 import { useGetTokenAccountsQuery } from '../data-access/use-get-token-accounts-query'
+import { useNotifications } from '@/components/notification-container'
 
 export function AccountUiTokens({ address }: { address: Address }) {
   const [showAll, setShowAll] = useState(false)
   const query = useGetTokenAccountsQuery({ address })
   const client = useQueryClient()
+  const { addNotification } = useNotifications()
+
+  useEffect(() => {
+    if (query.isError) {
+      addNotification({
+        title: `Error: ${query.error?.message.toString()}`,
+        variant: 'destructive',
+      })
+    }
+  }, [query.isError, query.error, addNotification])
   const items = useMemo(() => {
     if (showAll) return query.data
     return query.data?.slice(0, 5)
@@ -41,7 +52,6 @@ export function AccountUiTokens({ address }: { address: Address }) {
           </div>
         </div>
       </div>
-      {query.isError && <pre className="alert alert-error">Error: {query.error?.message.toString()}</pre>}
       {query.isSuccess && (
         <div>
           {query.data.length === 0 ? (

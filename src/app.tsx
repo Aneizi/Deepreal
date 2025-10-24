@@ -1,6 +1,7 @@
 import { AppProviders } from '@/components/app-providers.tsx'
 import { AppLayout } from '@/components/app-layout.tsx'
 import { AppRoutes } from '@/app-routes.tsx'
+import { NotificationProvider } from '@/components/notification-container.tsx'
 
 const links: { label: string; path: string }[] = [
   //
@@ -11,9 +12,11 @@ const links: { label: string; path: string }[] = [
 export function App() {
   return (
     <AppProviders>
-      <AppLayout links={links}>
-        <AppRoutes />
-      </AppLayout>
+      <NotificationProvider>
+        <AppLayout links={links}>
+          <AppRoutes />
+        </AppLayout>
+      </NotificationProvider>
     </AppProviders>
   )
 }

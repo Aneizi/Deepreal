@@ -1,15 +1,26 @@
 import { Address } from 'gill'
 import { RefreshCw } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { ellipsify } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AppExplorerLink } from '@/components/app-explorer-link'
 import { useGetSignaturesQuery } from '../data-access/use-get-signatures-query'
+import { useNotifications } from '@/components/notification-container'
 
 export function AccountUiTransactions({ address }: { address: Address }) {
   const query = useGetSignaturesQuery({ address })
   const [showAll, setShowAll] = useState(false)
+  const { addNotification } = useNotifications()
+
+  useEffect(() => {
+    if (query.isError) {
+      addNotification({
+        title: `Error: ${query.error?.message.toString()}`,
+        variant: 'destructive',
+      })
+    }
+  }, [query.isError, query.error, addNotification])
 
   const items = useMemo(() => {
     if (showAll) return query.data
@@ -30,7 +41,6 @@ export function AccountUiTransactions({ address }: { address: Address }) {
           )}
         </div>
       </div>
-      {query.isError && <pre className="alert alert-error">Error: {query.error?.message.toString()}</pre>}
       {query.isSuccess && (
         <div>
           {query.data.length === 0 ? (

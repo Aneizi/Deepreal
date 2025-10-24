@@ -10,7 +10,7 @@ type AcceptedFile = File | null
 const steps = [
   { title: 'Upload and protect the content' },
   { title: 'Download watermarked version' },
-  { title: 'Share and register' },
+  { title: 'Share and link the posts' },
 ]
 
 export default function Dropzone() {
@@ -278,14 +278,21 @@ export default function Dropzone() {
                     />
                   </div>
                 </Card>
-                <div className="flex justify-center mt-6">
+                <div className="flex justify-center gap-4 mt-6">
                   <Button 
                     asChild
+                    variant="outline"
                     className="w-full sm:w-auto"
                   >
                     <a href={processedImage} download="image-with-qr.png">
                       Download file
                     </a>
+                  </Button>
+                  <Button 
+                    onClick={() => setCurrentStep(3)}
+                    className="w-full sm:w-auto"
+                  >
+                    Next
                   </Button>
                 </div>
               </>

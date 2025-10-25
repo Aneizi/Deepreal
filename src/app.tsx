@@ -5,8 +5,9 @@ import { NotificationProvider } from '@/components/notification-container.tsx'
 
 const links: { label: string; path: string }[] = [
   //
+
   { label: 'Home', path: '/' },
-  { label: 'Account', path: '/account' },
+  { label: 'Sign', path: '/view' },
 ]
 
 export function App() {

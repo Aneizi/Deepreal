@@ -1,6 +1,5 @@
 import React from 'react'
 import { ClusterUiChecker } from '@/features/cluster/ui/cluster-ui-checker'
-import { AccountUiChecker } from '@/features/account/ui/account-ui-checker'
 import { ThemeProvider } from './theme-provider'
 import { Toaster } from './ui/sonner'
 import { AppHeader } from './app-header'
@@ -19,9 +18,8 @@ export function AppLayout({
         <AppHeader links={links} />
         <main className="flex-grow container mx-auto p-4">
           <ClusterUiChecker>
-            <AccountUiChecker />
+            {children}
           </ClusterUiChecker>
-          {children}
         </main>
         <AppFooter />
       </div>

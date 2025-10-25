@@ -1,7 +1,8 @@
 import React, { useCallback, useRef, useState} from 'react'
 import QRCode from 'qrcode'
-import { Upload, Trash2 } from 'lucide-react'
+import { Upload, Trash2, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Stepper } from '@/components/ui/stepper'
 import { useSolana } from '@/components/solana/use-solana.tsx'
@@ -53,7 +54,20 @@ function DropzoneWithWallet({ account }: { account: any }) {
   const [processedImage, setProcessedImage] = useState<string>('')
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [postLinks, setPostLinks] = useState<string[]>([''])
   const inputRef = useRef<HTMLInputElement | null>(null)
+
+  // Platform placeholder examples
+  const platformPlaceholders = [
+    'https://x.com/username/status/123456789',
+    'https://instagram.com/p/ABC123DEF',
+    'https://facebook.com/username/posts/123456789',
+    'https://tiktok.com/@username/video/123456789',
+    'https://linkedin.com/posts/username_activity-123456789',
+    'https://youtube.com/watch?v=ABC123DEF',
+    'https://snapchat.com/t/ABC123DEF',
+    'https://threads.net/@username/post/ABC123DEF'
+  ]
 
   const handleStepClick = useCallback((step: number) => {
     setCurrentStep(step)
@@ -62,6 +76,21 @@ function DropzoneWithWallet({ account }: { account: any }) {
       setProcessedImage('')
     }
   }, [])
+
+  // Functions to handle post links
+  const addPostLink = useCallback(() => {
+    setPostLinks(prev => [...prev, ''])
+  }, [])
+
+  const updatePostLink = useCallback((index: number, value: string) => {
+    setPostLinks(prev => prev.map((link, i) => i === index ? value : link))
+  }, [])
+
+  const removePostLink = useCallback((index: number) => {
+    if (postLinks.length > 1) {
+      setPostLinks(prev => prev.filter((_, i) => i !== index))
+    }
+  }, [postLinks.length])
 
 
   // Function to overlay QR code on the uploaded image
@@ -362,17 +391,57 @@ function DropzoneWithWallet({ account }: { account: any }) {
                     Post your watermarked content on any platform. Then paste the link back here so Deepreal can anchor your proof on Solana and make your authorship verifiable forever.
                   </p>
                 </div>
-                <Card className="p-6">
+                <Card className="p-3">
                   <div className="space-y-4">
-                    <p className="text-muted-foreground text-center py-12">
-                      Step 3 content coming soon...
+                    <h3 className="text-lg font-semibold mb-4">Post Links</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Add the links to your social media posts where you shared the watermarked content:
                     </p>
+                    
+                    {postLinks.map((link, index) => (
+                      <div key={index} className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Link to post {index + 1}
+                        </label>
+                        <div className="flex gap-2 items-center">
+                          <div className="flex-1">
+                            <Input
+                              type="url"
+                              placeholder={platformPlaceholders[index % platformPlaceholders.length]}
+                              value={link}
+                              onChange={(e) => updatePostLink(index, e.target.value)}
+                              className="w-full"
+                            />
+                          </div>
+                          {postLinks.length > 1 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removePostLink(index)}
+                              className="shrink-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={addPostLink}
+                      className="w-fit"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add another link
+                    </Button>
                   </div>
                 </Card>
                 <div className="flex justify-center mt-6">
                   <Button 
                     className="w-full sm:w-auto"
-                    disabled
+                    disabled={postLinks.every(link => !link.trim())}
                   >
                     Register post on Solana
                   </Button>

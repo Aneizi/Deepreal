@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useState, useEffect } from 'react'
 import { useSolana } from '@/components/solana/use-solana'
-import { getBase58Decoder, type Address } from 'gill'
+import { getBase58Encoder, type Address } from 'gill'
 
 interface VerificationData {
   isVerified: boolean
@@ -70,19 +70,10 @@ export default function VerificationPage() {
             if (programId !== MEMO_PROGRAM_ID) continue
 
             try {
-              // instruction.data is already in the correct format, just convert to string
+              // Decode base58 instruction data to bytes, then to UTF-8 string
+              const dataBytes = getBase58Encoder().encode(instruction.data)
               const decoder = new TextDecoder()
-              let memoText: string
-
-              // Check if instruction.data is already a Uint8Array or needs conversion
-              if (typeof instruction.data === 'string') {
-                // If it's a base58 string, decode it
-                const dataBytes = getBase58Decoder().decode(instruction.data)
-                memoText = decoder.decode(dataBytes)
-              } else {
-                // Otherwise it's already bytes, convert directly to string
-                memoText = decoder.decode(instruction.data as Uint8Array)
-              }
+              const memoText = decoder.decode(dataBytes)
 
               console.log('[VERIFICATION PAGE] Found memo:', memoText)
 

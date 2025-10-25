@@ -113,7 +113,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
       const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
 
       const memoIx = getAddMemoInstruction({
-        memo: "Watermark generated"
+        memo: "[Deepreal] Signature Generated"
       })
 
       const transaction = createTransaction({

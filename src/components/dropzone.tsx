@@ -54,6 +54,14 @@ function DropzoneWithWallet({ account }: { account: any }) {
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const logoRef = useRef<HTMLImageElement | null>(null)
+
+  // Preload logo on mount
+  React.useEffect(() => {
+    const logo = new Image()
+    logo.src = '/favicon.ico'
+    logoRef.current = logo
+  }, [])
 
   const handleStepClick = useCallback((step: number) => {
     setCurrentStep(step)
@@ -106,15 +114,15 @@ function DropzoneWithWallet({ account }: { account: any }) {
         }
       })
 
-      // Add logo in the center of QR code
+      // Add logo in the center of QR code (using cached logo)
       const qrCtx = qrCanvas.getContext('2d')
-      if (qrCtx) {
-        const logo = new Image()
-        await new Promise<void>((resolve, reject) => {
-          logo.onload = () => resolve()
-          logo.onerror = reject
-          logo.src = '/favicon.ico'
-        })
+      if (qrCtx && logoRef.current) {
+        // Wait for logo to load if not already loaded
+        if (!logoRef.current.complete) {
+          await new Promise<void>((resolve) => {
+            logoRef.current!.onload = () => resolve()
+          })
+        }
 
         // Calculate logo size (about 20% of QR code)
         const logoSize = qrCanvas.width * 0.2
@@ -128,30 +136,20 @@ function DropzoneWithWallet({ account }: { account: any }) {
         qrCtx.fill()
 
         // Draw logo
-        qrCtx.drawImage(logo, logoX, logoY, logoSize, logoSize)
+        qrCtx.drawImage(logoRef.current, logoX, logoY, logoSize, logoSize)
       }
 
-      const qrDataUrl = qrCanvas.toDataURL()
-
-      // Step 3: Proceed with QR code overlay
+      // Step 3: Overlay QR code on the uploaded image
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
       // Load the uploaded image
       const img = new Image()
-      const qrImg = new Image()
-
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve()
         img.onerror = reject
         img.src = URL.createObjectURL(file)
-      })
-
-      await new Promise<void>((resolve, reject) => {
-        qrImg.onload = () => resolve()
-        qrImg.onerror = reject
-        qrImg.src = qrDataUrl
       })
 
       // Set canvas size to match the image
@@ -170,8 +168,8 @@ function DropzoneWithWallet({ account }: { account: any }) {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
       ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20)
 
-      // Draw the QR code
-      ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
+      // Draw the QR code directly from canvas (no need to convert to image)
+      ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize)
 
       // Convert canvas to data URL and set as processed image
       const processedDataUrl = canvas.toDataURL('image/png')

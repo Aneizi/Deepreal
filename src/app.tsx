@@ -7,7 +7,7 @@ const links: { label: string; path: string }[] = [
   //
 
   { label: 'Home', path: '/' },
-  { label: 'Sign', path: '/view' },
+  { label: 'Sign', path: '/sign' },
 ]
 
 export function App() {

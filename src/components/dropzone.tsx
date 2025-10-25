@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react'
+import React, { useCallback, useRef, useState} from 'react'
 import QRCode from 'qrcode'
 import { Upload, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import {
   type Address
 } from 'gill'
 import { getAddMemoInstruction } from 'gill/programs'
-import { useWalletUiSigner } from '@wallet-ui/react'
+import { UiWalletAccount, useWalletUiSigner } from '@wallet-ui/react'
 
 type AcceptedFile = File | null
 
@@ -24,9 +24,9 @@ const steps = [
 
 export default function Dropzone() {
   const solana = useSolana()
-  const account = solana.account
+  const account = solana.account as UiWalletAccount
   const address = account?.address as Address
-  const signer = useWalletUiSigner(account ? { account } : undefined)
+  const signer = useWalletUiSigner({account})
 
   const [file, setFile] = useState<AcceptedFile>(null)
   const [isDragging, setIsDragging] = useState(false)

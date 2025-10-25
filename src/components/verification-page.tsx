@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useState, useEffect } from 'react'
 import { useSolana } from '@/components/solana/use-solana'
-import { getBase58Encoder, getBase58Decoder, type Address } from 'gill'
+import { getBase58Decoder, type Address } from 'gill'
 
 interface VerificationData {
   isVerified: boolean

@@ -12,7 +12,7 @@ import {
   type Address
 } from 'gill'
 import { getAddMemoInstruction } from 'gill/programs'
-import { UiWalletAccount, useWalletUiSigner } from '@wallet-ui/react'
+import { useWalletUiSigner } from '@wallet-ui/react'
 
 type AcceptedFile = File | null
 
@@ -24,9 +24,10 @@ const steps = [
 
 export default function Dropzone() {
   const solana = useSolana()
-  const account = solana.account as UiWalletAccount
+  const account = solana.account
   const address = account?.address as Address
-  const signer = useWalletUiSigner({account})
+  const signer = account ? useWalletUiSigner({account}) : null
+
 
   const [file, setFile] = useState<AcceptedFile>(null)
   const [isDragging, setIsDragging] = useState(false)

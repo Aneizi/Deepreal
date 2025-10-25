@@ -26,7 +26,7 @@ export default function Dropzone() {
   const solana = useSolana()
   const account = solana.account as UiWalletAccount
   const address = account?.address as Address
-  const signer = useWalletUiSigner({account})
+  const signer = account ? useWalletUiSigner({account}) : null
 
   const [file, setFile] = useState<AcceptedFile>(null)
   const [isDragging, setIsDragging] = useState(false)

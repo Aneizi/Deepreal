@@ -15,7 +15,7 @@ export default function SignTx() {
   const solana = useSolana();
   const account = solana.account as UiWalletAccount;
   const address = account?.address as Address;
-  const signer = useWalletUiSigner({account});
+  const signer = account ? useWalletUiSigner({account}) : null;
   const [signature, setSignature] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

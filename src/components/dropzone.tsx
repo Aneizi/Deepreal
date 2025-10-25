@@ -4,6 +4,15 @@ import { Upload, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Stepper } from '@/components/ui/stepper'
+import { useSolana } from '@/components/solana/use-solana.tsx'
+import {
+  createTransaction,
+  signAndSendTransactionMessageWithSigners,
+  getBase58Decoder,
+  type Address
+} from 'gill'
+import { getAddMemoInstruction } from 'gill/programs'
+import { useWalletUiSigner } from '@wallet-ui/react'
 
 type AcceptedFile = File | null
 
@@ -14,11 +23,17 @@ const steps = [
 ]
 
 export default function Dropzone() {
+  const solana = useSolana()
+  const account = solana.account
+  const address = account?.address as Address
+  const signer = useWalletUiSigner(account ? { account } : undefined)
+
   const [file, setFile] = useState<AcceptedFile>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [processedImage, setProcessedImage] = useState<string>('')
   const [currentStep, setCurrentStep] = useState(1)
+  const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const handleStepClick = useCallback((step: number) => {
@@ -78,8 +93,31 @@ export default function Dropzone() {
   // Function to overlay QR code on the uploaded image
   const overlayQRCodeOnImage = useCallback(async () => {
     if (!file || !qrCodeUrl) return
+    if (!signer || !address) return
 
+    setLoading(true)
     try {
+      // Step 1: Sign transaction with memo (from sign-tx.tsx)
+      const rpc = solana.client.rpc
+      const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+
+      const memoIx = getAddMemoInstruction({
+        memo: "Watermark generated"
+      })
+
+      const transaction = createTransaction({
+        version: 'legacy',
+        feePayer: signer,
+        instructions: [memoIx],
+        latestBlockhash: latestBlockhash,
+      })
+
+      const txSignature = await signAndSendTransactionMessageWithSigners(transaction)
+      const signatureString = getBase58Decoder().decode(txSignature)
+
+      console.log('Transaction signed:', signatureString)
+
+      // Step 2: Proceed with QR code overlay
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
       if (!ctx) return
@@ -126,8 +164,10 @@ export default function Dropzone() {
 
     } catch (error) {
       console.error('Failed to overlay QR code on image:', error)
+    } finally {
+      setLoading(false)
     }
-  }, [file, qrCodeUrl])
+  }, [file, qrCodeUrl, signer, address, solana.client.rpc])
 
   const onFiles = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -249,12 +289,12 @@ export default function Dropzone() {
 
                 {file && (
                   <div className="flex justify-center mt-6">
-                    <Button 
+                    <Button
                       onClick={overlayQRCodeOnImage}
-                      disabled={!file || !qrCodeUrl}
+                      disabled={!file || !qrCodeUrl || !signer || !address || loading}
                       className="w-full sm:w-auto"
                     >
-                      Generate watermark
+                      {loading ? 'Signing transaction...' : 'Generate watermark'}
                     </Button>
                   </div>
                 )}

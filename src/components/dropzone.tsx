@@ -25,8 +25,27 @@ const steps = [
 export default function Dropzone() {
   const solana = useSolana()
   const account = solana.account
+
+  // Check if account exists before trying to use it
+  if (!account) {
+    return <DropzoneNoWallet />
+  }
+
+  return <DropzoneWithWallet account={account} />
+}
+
+function DropzoneNoWallet() {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <p className="text-muted-foreground">Please connect your wallet to continue</p>
+    </div>
+  )
+}
+
+function DropzoneWithWallet({ account }: { account: any }) {
+  const solana = useSolana()
   const address = account?.address as Address
-  const signer = account ? useWalletUiSigner({account}) : null
+  const signer = useWalletUiSigner({ account })
 
 
   const [file, setFile] = useState<AcceptedFile>(null)

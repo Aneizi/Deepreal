@@ -13,8 +13,17 @@ import { useWalletUiSigner } from "@wallet-ui/react";
 export default function SignTx() {
   const solana = useSolana();
   const account = solana.account;
+
+  if (!account) {
+    return <h2>Not connected - Please connect your wallet</h2>
+  }
+
+  return <SignTxWithWallet account={account} solana={solana} />
+}
+
+function SignTxWithWallet({ account, solana }: { account: any; solana: any }) {
   const address = account?.address as Address;
-  const signer = account ? useWalletUiSigner({account}) : null;
+  const signer = useWalletUiSigner({ account });
 
   const [signature, setSignature] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

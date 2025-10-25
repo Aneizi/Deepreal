@@ -71,16 +71,47 @@ export default function Dropzone() {
 
       console.log('Transaction signed:', signatureString)
 
-      // Step 2: Generate QR code from the transaction signature
+      // Step 2: Generate QR code from the transaction signature with logo
       const explorerLink = `https://explorer.solana.com/tx/${signatureString}?cluster=devnet`
-      const qrDataUrl = await QRCode.toDataURL(explorerLink, {
+
+      // Generate QR code with high error correction to allow logo overlay
+      const qrCanvas = document.createElement('canvas')
+      await QRCode.toCanvas(qrCanvas, explorerLink, {
         width: 256,
         margin: 2,
+        errorCorrectionLevel: 'H', // High error correction for logo overlay
         color: {
           dark: '#000000',
           light: '#ffffff'
         }
       })
+
+      // Add logo in the center of QR code
+      const qrCtx = qrCanvas.getContext('2d')
+      if (qrCtx) {
+        const logo = new Image()
+        await new Promise<void>((resolve, reject) => {
+          logo.onload = () => resolve()
+          logo.onerror = reject
+          logo.src = '/favicon.ico'
+        })
+
+        // Calculate logo size (about 20% of QR code)
+        const logoSize = qrCanvas.width * 0.2
+        const logoX = (qrCanvas.width - logoSize) / 2
+        const logoY = (qrCanvas.height - logoSize) / 2
+
+        // Draw white background circle for logo
+        qrCtx.fillStyle = '#ffffff'
+        qrCtx.beginPath()
+        qrCtx.arc(qrCanvas.width / 2, qrCanvas.height / 2, logoSize * 0.6, 0, 2 * Math.PI)
+        qrCtx.fill()
+
+        // Draw logo
+        qrCtx.drawImage(logo, logoX, logoY, logoSize, logoSize)
+      }
+
+      const qrDataUrl = qrCanvas.toDataURL()
 
       // Step 3: Proceed with QR code overlay
       const canvas = document.createElement('canvas')

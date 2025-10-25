@@ -10,7 +10,7 @@ import {
 import { getAddMemoInstruction } from "gill/programs";
 import { useWalletUiSigner } from "@wallet-ui/react";
 
-export default function AccountView() {
+export default function SignTx() {
   const solana = useSolana();
   const account = solana.account;
   const address = account?.address as Address;

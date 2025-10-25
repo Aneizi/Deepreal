@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState} from 'react'
 import QRCode from 'qrcode'
-import { Upload, Trash2, Plus, X } from 'lucide-react'
+import { Upload, Trash2, Plus, X, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
@@ -244,14 +244,62 @@ function DropzoneWithWallet({ account }: { account: any }) {
 
   return (
     <>
-      <div className="fixed top-20 left-4 z-40 w-80">
-        <Card className="p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <Stepper steps={steps} currentStep={currentStep} onStepClick={handleStepClick} />
-        </Card>
-      </div>
-      
-      <div className="min-h-screen flex items-start justify-center p-4 bg-background pt-20">
-        <div className="w-full max-w-2xl space-y-2">
+      <div className="min-h-screen flex flex-col xl:block p-4 bg-background">
+        <div className="w-full xl:w-[300px] xl:shrink-0 mb-12 xl:mb-0 xl:absolute xl:left-4 xl:top-20">
+          {/* Mobile/Tablet: Horizontal Stepper (no card) */}
+          <div className="xl:hidden">
+            <div className="flex justify-between items-start relative">
+              {steps.map((step, index) => {
+                const stepNumber = index + 1
+                const isCompleted = stepNumber < currentStep
+                const isCurrent = stepNumber === currentStep
+                const isUpcoming = stepNumber > currentStep
+                const isClickable = isCompleted && handleStepClick
+
+                return (
+                  <div key={index} className="flex flex-col items-center flex-1 relative">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold mb-2 bg-background ${
+                        isCompleted ? 'border-primary text-primary' :
+                        isCurrent ? 'border-primary text-primary' :
+                        'border-muted-foreground/25 text-muted-foreground'
+                      } ${isClickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                      onClick={() => isClickable && handleStepClick(stepNumber)}
+                      role={isClickable ? 'button' : undefined}
+                      tabIndex={isClickable ? 0 : undefined}
+                    >
+                      {isCompleted ? <Check className="h-5 w-5" /> : stepNumber}
+                    </div>
+                    <p className={`text-xs text-center leading-tight ${
+                      isCurrent ? 'text-primary font-medium' : 
+                      isUpcoming ? 'text-muted-foreground' : 'text-foreground'
+                    }`}>
+                      {step.title.split(' ')[0]}
+                    </p>
+                    
+                    {/* Connecting line */}
+                    {index < steps.length - 1 && (
+                      <div className={`absolute top-4 left-[calc(50%+1rem)] w-[calc(100%-2rem)] h-0.5 ${
+                        isCompleted ? 'bg-primary' : 'bg-muted-foreground/25'
+                      }`} />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          
+          {/* Desktop: Vertical Stepper (with card) */}
+          <div className="hidden xl:block">
+            <Card className="p-4">
+              <Stepper steps={steps} currentStep={currentStep} onStepClick={handleStepClick} />
+            </Card>
+          </div>
+        </div>
+        
+        {/* Content - Centered on desktop */}
+        <div className="flex-1 xl:flex xl:justify-center xl:items-start xl:pt-0 space-y-2 xl:max-w-none xl:mx-0">
+          <div className="w-full xl:max-w-[600px] xl:space-y-2 space-y-2">
           {currentStep === 1 && (
             <>
               <div className="space-y-2 mb-6">
@@ -277,7 +325,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
                   </Button>
                 )}
                 <div
-                  className={`relative rounded-lg border-2 border-dashed transition-colors h-[400px] flex items-center justify-center ${
+                  className={`relative rounded-lg border-2 border-dashed transition-colors h-[300px] flex items-center justify-center ${
                     isDragging
                       ? 'border-primary bg-primary/5'
                       : 'border-muted-foreground/25 hover:border-muted-foreground/50'
@@ -307,7 +355,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
                     <img 
                       src={URL.createObjectURL(file)} 
                       alt={file.name}
-                      className="w-auto h-auto object-contain max-h-[300px] max-w-full rounded-lg border"
+                      className="w-auto h-auto object-contain max-h-[200px] max-w-full rounded-lg border"
                     />
                   </div>
                   <div className="flex flex-col items-center gap-1">
@@ -353,11 +401,11 @@ function DropzoneWithWallet({ account }: { account: any }) {
                   </p>
                 </div>
                 <Card className="p-2 relative">
-                  <div className="relative rounded-lg border-2 border-dashed border-muted-foreground/25 h-[400px] flex items-center justify-center overflow-hidden">
+                  <div className="relative rounded-lg border-2 border-dashed border-muted-foreground/25 h-[300px] flex items-center justify-center overflow-hidden">
                     <img 
                       src={processedImage} 
                       alt="Image with QR Code" 
-                      className="w-auto h-auto object-contain max-h-[380px] max-w-full"
+                      className="w-auto h-auto object-contain max-h-[200px] max-w-full"
                     />
                   </div>
                 </Card>
@@ -401,7 +449,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
                         <label className="text-sm font-medium">
                           Link to post {index + 1}
                         </label>
-                        <div className="flex gap-2 items-center">
+                        <div className="flex gap-2 items-center mt-1">
                           <div className="flex-1">
                             <Input
                               type="url"
@@ -446,6 +494,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
                 </div>
               </>
             )}
+          </div>
         </div>
       </div>
     </>

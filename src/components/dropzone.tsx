@@ -133,12 +133,12 @@ function DropzoneWithWallet({ account }: { account: any }) {
       // Store the first signature for use in step 3
       setFirstSignature(signatureString)
 
-      // Step 2: Generate QR code from the transaction signature with logo
-      const explorerLink = `https://explorer.solana.com/tx/${signatureString}?cluster=devnet`
+      // Step 2: Generate QR code linking to verification page
+      const verifyLink = `${window.location.origin}/verify/${signatureString}`
 
       // Generate QR code with high error correction to allow logo overlay
       const qrCanvas = document.createElement('canvas')
-      await QRCode.toCanvas(qrCanvas, explorerLink, {
+      await QRCode.toCanvas(qrCanvas, verifyLink, {
         width: 256,
         margin: 2,
         errorCorrectionLevel: 'H', // High error correction for logo overlay

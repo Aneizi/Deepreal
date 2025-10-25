@@ -9,12 +9,13 @@ import {
 } from "gill";
 import { getAddMemoInstruction } from "gill/programs";
 import { useWalletUiSigner } from "@wallet-ui/react";
+import {type UiWalletAccount} from '@wallet-ui/react'
 
 export default function SignTx() {
   const solana = useSolana();
-  const account = solana.account;
+  const account = solana.account as UiWalletAccount;
   const address = account?.address as Address;
-  const signer = useWalletUiSigner(account ? { account } : undefined);
+  const signer = useWalletUiSigner({account});
   const [signature, setSignature] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

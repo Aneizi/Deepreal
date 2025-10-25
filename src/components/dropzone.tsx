@@ -30,7 +30,6 @@ export default function Dropzone() {
 
   const [file, setFile] = useState<AcceptedFile>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [processedImage, setProcessedImage] = useState<string>('')
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -44,55 +43,10 @@ export default function Dropzone() {
     }
   }, [])
 
-  // Mock function to get link from backend
-  const fetchBackendLink = useCallback(async (): Promise<string> => {
-    try {
-      // TODO: Replace with actual backend API call
-      // const response = await fetch('/api/get-link')
-      // const data = await response.json()
-      // return data.link
-      
-      // Mock delay to simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Return mock link or fallback
-      return 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
-    } catch (error) {
-      console.error('Failed to fetch backend link:', error)
-      return 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Fallback
-    }
-  }, [])
-
-  // Generate QR code from link
-  const generateQRCode = useCallback(async (link: string) => {
-    try {
-      const qrDataUrl = await QRCode.toDataURL(link, {
-        width: 256,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#ffffff'
-        }
-      })
-      setQrCodeUrl(qrDataUrl)
-    } catch (error) {
-      console.error('Failed to generate QR code:', error)
-    }
-  }, [])
-
-  // Fetch link and generate QR code on component mount
-  useEffect(() => {
-    const initializeQRCode = async () => {
-      const link = await fetchBackendLink()
-      await generateQRCode(link)
-    }
-    
-    initializeQRCode()
-  }, [fetchBackendLink, generateQRCode])
 
   // Function to overlay QR code on the uploaded image
   const overlayQRCodeOnImage = useCallback(async () => {
-    if (!file || !qrCodeUrl) return
+    if (!file) return
     if (!signer || !address) return
 
     setLoading(true)
@@ -117,7 +71,18 @@ export default function Dropzone() {
 
       console.log('Transaction signed:', signatureString)
 
-      // Step 2: Proceed with QR code overlay
+      // Step 2: Generate QR code from the transaction signature
+      const explorerLink = `https://explorer.solana.com/tx/${signatureString}?cluster=devnet`
+      const qrDataUrl = await QRCode.toDataURL(explorerLink, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      })
+
+      // Step 3: Proceed with QR code overlay
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
       if (!ctx) return
@@ -135,7 +100,7 @@ export default function Dropzone() {
       await new Promise<void>((resolve, reject) => {
         qrImg.onload = () => resolve()
         qrImg.onerror = reject
-        qrImg.src = qrCodeUrl
+        qrImg.src = qrDataUrl
       })
 
       // Set canvas size to match the image
@@ -167,7 +132,7 @@ export default function Dropzone() {
     } finally {
       setLoading(false)
     }
-  }, [file, qrCodeUrl, signer, address, solana.client.rpc])
+  }, [file, signer, address, solana.client.rpc])
 
   const onFiles = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -291,7 +256,7 @@ export default function Dropzone() {
                   <div className="flex justify-center mt-6">
                     <Button
                       onClick={overlayQRCodeOnImage}
-                      disabled={!file || !qrCodeUrl || !signer || !address || loading}
+                      disabled={!file || !signer || !address || loading}
                       className="w-full sm:w-auto"
                     >
                       {loading ? 'Signing transaction...' : 'Generate watermark'}

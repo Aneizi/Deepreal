@@ -55,6 +55,8 @@ function DropzoneWithWallet({ account }: { account: any }) {
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [postLinks, setPostLinks] = useState<string[]>([''])
+  const [firstSignature, setFirstSignature] = useState<string>('')
+  const [secondSignature, setSecondSignature] = useState<string>('')
   const inputRef = useRef<HTMLInputElement | null>(null)
   const logoRef = useRef<HTMLImageElement | null>(null)
 
@@ -113,7 +115,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
       const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
 
       const memoIx = getAddMemoInstruction({
-        memo: "Watermark generated"
+        memo: "[Deepreal] Signature Generated"
       })
 
       const transaction = createTransaction({
@@ -128,12 +130,15 @@ function DropzoneWithWallet({ account }: { account: any }) {
 
       console.log('Transaction signed:', signatureString)
 
-      // Step 2: Generate QR code from the transaction signature with logo
-      const explorerLink = `https://explorer.solana.com/tx/${signatureString}?cluster=devnet`
+      // Store the first signature for use in step 3
+      setFirstSignature(signatureString)
+
+      // Step 2: Generate QR code linking to verification page
+      const verifyLink = `${window.location.origin}/verify/${signatureString}`
 
       // Generate QR code with high error correction to allow logo overlay
       const qrCanvas = document.createElement('canvas')
-      await QRCode.toCanvas(qrCanvas, explorerLink, {
+      await QRCode.toCanvas(qrCanvas, verifyLink, {
         width: 256,
         margin: 2,
         errorCorrectionLevel: 'H', // High error correction for logo overlay
@@ -211,6 +216,59 @@ function DropzoneWithWallet({ account }: { account: any }) {
       setLoading(false)
     }
   }, [file, signer, address, solana.client.rpc])
+
+  // Function to submit post links to Solana
+  const submitPostLinks = useCallback(async () => {
+    if (!signer || !address) return
+    if (!firstSignature) {
+      console.error('First signature not found')
+      return
+    }
+
+    // Filter out empty links
+    const validLinks = postLinks.filter(link => link.trim() !== '')
+    if (validLinks.length === 0) {
+      alert('Please add at least one post link')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const rpc = solana.client.rpc
+      const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+
+      // Create memo with standardized format: [Deepreal] {firstSignature} | {JSON.stringify(links)}
+      const linksData = JSON.stringify(validLinks)
+      const memo = `[Deepreal] ${firstSignature} | ${linksData}`
+
+      console.log('Submitting memo:', memo)
+
+      const memoIx = getAddMemoInstruction({
+        memo: memo
+      })
+
+      const transaction = createTransaction({
+        version: 'legacy',
+        feePayer: signer,
+        instructions: [memoIx],
+        latestBlockhash: latestBlockhash,
+      })
+
+      const txSignature = await signAndSendTransactionMessageWithSigners(transaction)
+      const signatureString = getBase58Decoder().decode(txSignature)
+
+      console.log('Post links transaction signed:', signatureString)
+
+      // Store the second signature
+      setSecondSignature(signatureString)
+
+    } catch (error) {
+      console.error('Failed to submit post links:', error)
+      alert('Failed to submit post links. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }, [signer, address, firstSignature, postLinks, solana.client.rpc])
 
   const onFiles = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -485,13 +543,50 @@ function DropzoneWithWallet({ account }: { account: any }) {
                   </div>
                 </Card>
                 <div className="flex justify-center mt-6">
-                  <Button 
+                  <Button
                     className="w-full sm:w-auto"
-                    disabled={postLinks.every(link => !link.trim())}
+                    disabled={postLinks.every(link => !link.trim()) || loading}
+                    onClick={submitPostLinks}
                   >
-                    Register post on Solana
+                    {loading ? 'Registering on Solana...' : 'Register post on Solana'}
                   </Button>
                 </div>
+
+                {/* Display second signature after submission */}
+                {secondSignature && (
+                  <Card className="p-6 mt-6">
+                    <h3 className="text-lg font-semibold mb-4">Registration Complete!</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Original Watermark Signature</label>
+                        <code className="bg-muted p-2 rounded text-sm block mt-1 break-all">
+                          {firstSignature}
+                        </code>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Post Registration Signature</label>
+                        <code className="bg-muted p-2 rounded text-sm block mt-1 break-all">
+                          {secondSignature}
+                        </code>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                        >
+                          <a
+                            href={`https://explorer.solana.com/tx/${secondSignature}?cluster=devnet`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            View on Solana Explorer
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                )}
               </>
             )}
           </div>

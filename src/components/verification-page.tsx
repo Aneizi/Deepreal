@@ -3,8 +3,7 @@ import { Check, ExternalLink, Copy, Shield, Loader2, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useState, useEffect } from 'react'
-import { useSolana } from '@/components/solana/use-solana'
-import { getBase58Encoder, type Address } from 'gill'
+import { createSolanaRpc, getBase58Encoder, type Address } from 'gill'
 
 interface VerificationData {
   isVerified: boolean
@@ -16,7 +15,6 @@ interface VerificationData {
 
 export default function VerificationPage() {
   const { signature } = useParams<{ signature: string }>()
-  const solana = useSolana()
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
   const [verificationData, setVerificationData] = useState<VerificationData | null>(null)
@@ -31,7 +29,9 @@ export default function VerificationPage() {
       setError(null)
 
       try {
-        const rpc = solana.client.rpc
+        // Create standalone RPC client for devnet (no wallet required)
+        // Using Helius free tier for better rate limits
+        const rpc = createSolanaRpc('https://devnet.helius-rpc.com/?api-key=d7d8a35f-2f2a-46e5-b84f-ae3e60a8f3c4')
 
         // Get the first transaction to verify it exists and get the wallet address
         console.log('[VERIFICATION PAGE] First signature:', signature)
@@ -114,7 +114,7 @@ export default function VerificationPage() {
     }
 
     fetchVerificationData()
-  }, [signature, solana.client.rpc])
+  }, [signature])
 
   const copyToClipboard = async (text: string) => {
     try {

@@ -290,15 +290,31 @@ export default function VerificationPage() {
                 </div>
               </div>
             ) : verificationData.isVerified ? (
-              <div className="flex items-center gap-4 px-6 py-4 rounded-full border-2 border-green-300 bg-green-50">
-                <div className="bg-green-600 p-1.5 rounded-full">
-                  <Check className="h-5 w-5 text-white" />
-                </div>
-                <div className="text-left">
-                  <h2 className="text-lg font-semibold text-green-900">Verified Content</h2>
-                  <p className="text-sm text-green-800">
-                    Cryptographically verified on Solana
-                  </p>
+              <div className="relative group">
+                {/* Glow effect */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 rounded-full opacity-30 blur-xl group-hover:opacity-50 transition-opacity duration-500" />
+
+                {/* Glass container */}
+                <div className="relative flex items-center gap-4 px-8 py-5 rounded-full overflow-hidden backdrop-blur-xl bg-gradient-to-br from-white/40 via-white/30 to-white/20 border border-white/30 shadow-2xl">
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+                  {/* Glass reflection overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-50" />
+
+                  {/* Icon with glass effect */}
+                  <div className="relative z-10 bg-gradient-to-br from-green-500 to-emerald-600 p-2 rounded-full shadow-lg">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent rounded-full" />
+                    <Check className="relative h-5 w-5 text-white drop-shadow-sm" />
+                  </div>
+
+                  {/* Text content */}
+                  <div className="relative z-10 text-left">
+                    <h2 className="text-lg font-semibold text-gray-900 drop-shadow-sm">Verified Content</h2>
+                    <p className="text-sm text-gray-700/90">
+                      Cryptographically verified on Solana
+                    </p>
+                  </div>
                 </div>
               </div>
             ) : (

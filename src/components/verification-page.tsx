@@ -1,5 +1,5 @@
 import { useParams } from 'react-router'
-import { Check, ExternalLink, Copy, Shield, Loader2 } from 'lucide-react'
+import { Check, ExternalLink, Copy, Shield, Loader2, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useState, useEffect } from 'react'
@@ -11,6 +11,7 @@ interface VerificationData {
   walletAddress: string
   timestamp: string
   socialLinks: string[]
+  isPending: boolean // True if first transaction exists but no social links registered yet
 }
 
 export default function VerificationPage() {
@@ -101,7 +102,8 @@ export default function VerificationPage() {
           isVerified: true,
           walletAddress,
           timestamp: blockTime ? new Date(Number(blockTime) * 1000).toISOString() : new Date().toISOString(),
-          socialLinks
+          socialLinks,
+          isPending: socialLinks.length === 0 // Pending if no social links registered yet
         })
       } catch (err) {
         console.error('Error fetching verification data:', err)
@@ -204,7 +206,19 @@ export default function VerificationPage() {
         {/* Verification Status */}
         <Card className="p-6">
           <div className="flex items-center justify-center space-x-3 mb-4">
-            {verificationData.isVerified ? (
+            {verificationData.isPending ? (
+              <>
+                <div className="bg-yellow-100 p-2 rounded-full">
+                  <Clock className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-yellow-600">Registration Pending</h2>
+                  <p className="text-sm text-muted-foreground">
+                    The owner of this content hasn't completed the verification procedure yet
+                  </p>
+                </div>
+              </>
+            ) : verificationData.isVerified ? (
               <>
                 <div className="bg-green-100 p-2 rounded-full">
                   <Check className="h-6 w-6 text-green-600" />

@@ -134,7 +134,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
       setFirstSignature(signatureString)
 
       // Step 2: Generate QR code linking to verification page
-      const verifyLink = `${window.location.origin}/verify/${signatureString}`
+      const verifyLink = `https://usedeepreal.com/verify/${signatureString}`
 
       // Generate QR code with high error correction to allow logo overlay
       const qrCanvas = document.createElement('canvas')

@@ -12,6 +12,11 @@ interface VerificationData {
   socialLinks: string[]
   isPending: boolean // True if first transaction exists but no social links registered yet
   originalSignature: string // The first signature (from QR code)
+  allRegistrations: Array<{
+    signature: string
+    timestamp: string
+    links: string[]
+  }> // All second signatures found for this content
 }
 
 export default function VerificationPage() {
@@ -96,8 +101,8 @@ export default function VerificationPage() {
 
         console.log('[VERIFICATION PAGE] Fetching signatures after first tx:', signaturesResponse.length, 'transactions')
 
-        // Find the transaction that contains the first signature in memo
-        let socialLinks: string[] = []
+        // Find ALL transactions that contain the first signature in memo
+        const allRegistrations: Array<{ signature: string; timestamp: string; links: string[] }> = []
 
         for (const sig of signaturesResponse) {
           const txData = await rpc.getTransaction(sig.signature).send()
@@ -127,7 +132,16 @@ export default function VerificationPage() {
                 // Extract links from memo
                 const parts = memoText.split(' | ')
                 if (parts.length > 1) {
-                  socialLinks = JSON.parse(parts[1])
+                  const links = JSON.parse(parts[1])
+                  const txBlockTime = txData.blockTime
+
+                  allRegistrations.push({
+                    signature: sig.signature as string,
+                    timestamp: txBlockTime ? new Date(Number(txBlockTime) * 1000).toISOString() : new Date().toISOString(),
+                    links
+                  })
+
+                  console.log('[VERIFICATION PAGE] Found registration:', { signature: sig.signature, links })
                 }
                 break
               }
@@ -137,9 +151,12 @@ export default function VerificationPage() {
               continue
             }
           }
-
-          if (socialLinks.length > 0) break
         }
+
+        console.log('[VERIFICATION PAGE] Total registrations found:', allRegistrations.length)
+
+        // Use the most recent registration (first in the array since results are sorted newest first)
+        const socialLinks = allRegistrations.length > 0 ? allRegistrations[0].links : []
 
         setVerificationData({
           isVerified: true,
@@ -147,7 +164,8 @@ export default function VerificationPage() {
           timestamp: blockTime ? new Date(Number(blockTime) * 1000).toISOString() : new Date().toISOString(),
           socialLinks,
           isPending: socialLinks.length === 0, // Pending if no social links registered yet
-          originalSignature: firstSignature // Store the first signature for display
+          originalSignature: firstSignature, // Store the first signature for display
+          allRegistrations // Store all registrations for display
         })
       } catch (err) {
         console.error('Error fetching verification data:', err)
@@ -362,6 +380,70 @@ export default function VerificationPage() {
             </p>
           )}
         </Card>
+
+        {/* Multiple Registrations (Subtle) */}
+        {verificationData.allRegistrations.length > 1 && (
+          <Card className="p-4 bg-muted/30">
+            <details className="group">
+              <summary className="flex items-center justify-between cursor-pointer list-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Update History ({verificationData.allRegistrations.length} registrations)
+                  </span>
+                </div>
+                <svg
+                  className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div className="mt-4 space-y-3 pt-3 border-t">
+                <p className="text-xs text-muted-foreground mb-3">
+                  This content has been registered multiple times. Showing the most recent registration above.
+                </p>
+                {verificationData.allRegistrations.map((reg, index) => (
+                  <div key={reg.signature} className="border-l-2 border-muted pl-3 py-2 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                      <span className="text-xs font-medium">
+                        Registration #{index + 1}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(reg.timestamp).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <code className="text-xs bg-muted p-1.5 rounded block break-all">
+                      {reg.signature}
+                    </code>
+                    <ul className="text-xs space-y-1 pl-2">
+                      {reg.links.map((link, linkIndex) => (
+                        <li key={linkIndex} className="truncate">
+                          <a
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                            title={link}
+                          >
+                            {link}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </details>
+          </Card>
+        )}
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground">

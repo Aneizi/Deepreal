@@ -277,7 +277,6 @@ export default function VerificationPage() {
 
         {/* Verification Status */}
         <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent h-px" />
           <div className="flex items-center justify-center py-8">
             {verificationData.isPending ? (
               <div className="flex items-center gap-4 px-6 py-4 rounded-full border-2 border-yellow-300 bg-yellow-50">
@@ -329,7 +328,6 @@ export default function VerificationPage() {
               </div>
             )}
           </div>
-          <div className="absolute inset-0 top-auto bg-gradient-to-r from-transparent via-primary/5 to-transparent h-px" />
         </div>
 
         {/* Transaction Details */}

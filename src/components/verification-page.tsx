@@ -11,6 +11,7 @@ interface VerificationData {
   timestamp: string
   socialLinks: string[]
   isPending: boolean // True if first transaction exists but no social links registered yet
+  originalSignature: string // The first signature (from QR code)
 }
 
 export default function VerificationPage() {
@@ -32,8 +33,8 @@ export default function VerificationPage() {
         // Create standalone RPC client for devnet (no wallet required)
         const rpc = createSolanaRpc('https://api.devnet.solana.com')
 
-        // Get the first transaction to verify it exists and get the wallet address
-        console.log('[VERIFICATION PAGE] First signature:', signature)
+        // Get the transaction to verify it exists and get the wallet address
+        console.log('[VERIFICATION PAGE] Signature from URL:', signature)
         const txResponse = await rpc.getTransaction(signature as any).send()
 
         if (!txResponse) {
@@ -45,12 +46,51 @@ export default function VerificationPage() {
         const blockTime = txResponse.blockTime
 
         console.log('[VERIFICATION PAGE] Wallet address:', walletAddress)
-        console.log('[VERIFICATION PAGE] First transaction block time:', blockTime)
+        console.log('[VERIFICATION PAGE] Transaction block time:', blockTime)
+
+        // Check if this signature is actually the SECOND transaction (contains another signature in memo)
+        let firstSignature = signature
+        const MEMO_PROGRAM_ID = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
+
+        const instructions = txResponse.transaction.message.instructions
+        const accountKeys = txResponse.transaction.message.accountKeys
+
+        for (const instruction of instructions) {
+          const programId = accountKeys[instruction.programIdIndex as number]
+          if (programId !== MEMO_PROGRAM_ID) continue
+
+          try {
+            // Decode memo instruction
+            const dataBytes = getBase58Encoder().encode(instruction.data)
+            const decoder = new TextDecoder()
+            const memoText = decoder.decode(dataBytes)
+
+            console.log('[VERIFICATION PAGE] Found memo in provided signature:', memoText)
+
+            // Check if this memo contains a first signature (format: [Deepreal] {firstSig} | ...)
+            if (memoText.startsWith('[Deepreal] ') && memoText.includes(' | ')) {
+              const parts = memoText.split(' | ')
+              const extractedSig = parts[0].replace('[Deepreal] ', '').trim()
+
+              // If we found a signature in the memo, this is the second transaction
+              if (extractedSig && extractedSig !== signature) {
+                console.log('[VERIFICATION PAGE] Detected second signature, extracting first:', extractedSig)
+                firstSignature = extractedSig
+                break
+              }
+            }
+          } catch (e) {
+            console.error('[VERIFICATION PAGE] Error parsing memo:', e)
+            continue
+          }
+        }
+
+        console.log('[VERIFICATION PAGE] Using first signature for search:', firstSignature)
 
         // Only fetch signatures that came AFTER the first transaction
         // Using 'until' parameter to stop at the first signature (exclusive)
         const signaturesResponse = await rpc.getSignaturesForAddress(walletAddress, {
-          until: signature as any,
+          until: firstSignature as any,
           limit: 100
         }).send()
 
@@ -58,7 +98,6 @@ export default function VerificationPage() {
 
         // Find the transaction that contains the first signature in memo
         let socialLinks: string[] = []
-        const MEMO_PROGRAM_ID = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
 
         for (const sig of signaturesResponse) {
           const txData = await rpc.getTransaction(sig.signature).send()
@@ -66,12 +105,12 @@ export default function VerificationPage() {
           if (!txData) continue
 
           // Check if transaction has memo instruction
-          const instructions = txData.transaction.message.instructions
-          const accountKeys = txData.transaction.message.accountKeys
+          const txInstructions = txData.transaction.message.instructions
+          const txAccountKeys = txData.transaction.message.accountKeys
 
-          for (const instruction of instructions) {
+          for (const instruction of txInstructions) {
             // Check if this is a memo instruction
-            const programId = accountKeys[instruction.programIdIndex as number]
+            const programId = txAccountKeys[instruction.programIdIndex as number]
             if (programId !== MEMO_PROGRAM_ID) continue
 
             try {
@@ -82,9 +121,9 @@ export default function VerificationPage() {
 
               console.log('[VERIFICATION PAGE] Found memo:', memoText)
 
-              // Check if memo contains our signature
+              // Check if memo contains our first signature
               // Format: [Deepreal] {firstSignature} | {JSON.stringify(links)}
-              if (memoText.includes(`[Deepreal] ${signature}`)) {
+              if (memoText.includes(`[Deepreal] ${firstSignature}`)) {
                 // Extract links from memo
                 const parts = memoText.split(' | ')
                 if (parts.length > 1) {
@@ -107,7 +146,8 @@ export default function VerificationPage() {
           walletAddress,
           timestamp: blockTime ? new Date(Number(blockTime) * 1000).toISOString() : new Date().toISOString(),
           socialLinks,
-          isPending: socialLinks.length === 0 // Pending if no social links registered yet
+          isPending: socialLinks.length === 0, // Pending if no social links registered yet
+          originalSignature: firstSignature // Store the first signature for display
         })
       } catch (err) {
         console.error('Error fetching verification data:', err)
@@ -255,15 +295,15 @@ export default function VerificationPage() {
           <h3 className="text-lg font-semibold mb-4">Transaction Details</h3>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Signature</label>
+              <label className="text-sm font-medium text-muted-foreground">Original Signature</label>
               <div className="flex items-center space-x-2 mt-1">
                 <code className="bg-muted p-2 rounded text-sm flex-1 break-all">
-                  {signature || "N/A"}
+                  {verificationData.originalSignature || "N/A"}
                 </code>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => copyToClipboard(signature || "")}
+                  onClick={() => copyToClipboard(verificationData.originalSignature || "")}
                 >
                   {copied ? "Copied!" : <Copy className="h-4 w-4" />}
                 </Button>

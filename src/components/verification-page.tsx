@@ -30,8 +30,7 @@ export default function VerificationPage() {
 
       try {
         // Create standalone RPC client for devnet (no wallet required)
-        // Using Helius free tier for better rate limits
-        const rpc = createSolanaRpc('https://devnet.helius-rpc.com/?api-key=d7d8a35f-2f2a-46e5-b84f-ae3e60a8f3c4')
+        const rpc = createSolanaRpc('https://api.devnet.solana.com')
 
         // Get the first transaction to verify it exists and get the wallet address
         console.log('[VERIFICATION PAGE] First signature:', signature)
@@ -41,16 +40,21 @@ export default function VerificationPage() {
           throw new Error('Transaction not found')
         }
 
-        // Extract wallet address (fee payer)
+        // Extract wallet address (fee payer) and block time
         const walletAddress = txResponse.transaction.message.accountKeys[0] as Address
         const blockTime = txResponse.blockTime
 
         console.log('[VERIFICATION PAGE] Wallet address:', walletAddress)
+        console.log('[VERIFICATION PAGE] First transaction block time:', blockTime)
 
-        // Get recent signatures for this wallet to find the second transaction
-        const signaturesResponse = await rpc.getSignaturesForAddress(walletAddress).send()
+        // Only fetch signatures that came AFTER the first transaction
+        // Using 'until' parameter to stop at the first signature (exclusive)
+        const signaturesResponse = await rpc.getSignaturesForAddress(walletAddress, {
+          until: signature as any,
+          limit: 100
+        }).send()
 
-        console.log('[VERIFICATION PAGE] Fetching signatures:', signaturesResponse)
+        console.log('[VERIFICATION PAGE] Fetching signatures after first tx:', signaturesResponse.length, 'transactions')
 
         // Find the transaction that contains the first signature in memo
         let socialLinks: string[] = []

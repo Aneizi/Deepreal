@@ -495,8 +495,8 @@ function DropzoneWithWallet({ account }: { account: any }) {
                     />
                   </div>
                 </Card>
-                <div className="flex justify-center gap-4 mt-6">
-                  <Button 
+                <div className="flex flex-col sm:flex-row justify-center gap-4 mt-6">
+                  <Button
                     asChild
                     variant="outline"
                     className="w-full sm:w-auto"
@@ -505,7 +505,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
                       Download file
                     </a>
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => setCurrentStep(3)}
                     className="w-full sm:w-auto"
                   >

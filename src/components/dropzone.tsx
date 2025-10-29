@@ -135,7 +135,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
       setFirstSignature(signatureString)
 
       // Step 2: Generate QR code linking to verification page
-      const verifyLink = `${window.location.origin}/verify/${signatureString}`
+      const verifyLink = `https://usedeepreal.com/verify/${signatureString}`
 
       // Generate QR code with high error correction to allow logo overlay
       const qrCanvas = document.createElement('canvas')
@@ -271,7 +271,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
     }
   }, [signer, address, firstSignature, postLinks, solana.client.rpc])
 
-  const onFiles = useCallback((files: FileList | null) => {
+  const onFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return
     const f = files[0]
     const allowed = ['image/png', 'image/jpeg']
@@ -279,7 +279,35 @@ function DropzoneWithWallet({ account }: { account: any }) {
       alert('Only PNG or JPG files are allowed')
       return
     }
-    setFile(f)
+
+    // Validate image dimensions
+    try {
+      const img = new Image()
+      const imageUrl = URL.createObjectURL(f)
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => {
+          URL.revokeObjectURL(imageUrl)
+
+          // Check minimum dimensions
+          if (img.width < 128 || img.height < 128) {
+            reject(new Error(`Image is too small. The minimum size is 128x128 pixels. Your image is ${img.width}x${img.height} pixels.`))
+            return
+          }
+
+          resolve()
+        }
+        img.onerror = () => {
+          URL.revokeObjectURL(imageUrl)
+          reject(new Error('Failed to load image'))
+        }
+        img.src = imageUrl
+      })
+
+      setFile(f)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to validate image')
+    }
   }, [])
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -468,8 +496,8 @@ function DropzoneWithWallet({ account }: { account: any }) {
                     />
                   </div>
                 </Card>
-                <div className="flex justify-center gap-4 mt-6">
-                  <Button 
+                <div className="flex flex-col sm:flex-row justify-center gap-4 mt-6">
+                  <Button
                     asChild
                     variant="outline"
                     className="w-full sm:w-auto"
@@ -478,7 +506,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
                       Download file
                     </a>
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => setCurrentStep(3)}
                     className="w-full sm:w-auto"
                   >

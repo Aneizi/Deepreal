@@ -37,7 +37,7 @@ function SignTxWithWallet({ account, solana }: { account: any; solana: any }) {
       const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
       const memoIx = getAddMemoInstruction({
-        memo: "Leo the choccy milk princess"
+        memo: "[Deepreal] etc."
       });
 
       const transaction = createTransaction({

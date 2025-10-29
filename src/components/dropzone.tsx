@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react'
 import QRCode from 'qrcode'
-import { Upload, Trash2, Plus, X, Check } from 'lucide-react'
+import { Upload, Trash2, Plus, X, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
@@ -56,11 +56,13 @@ function DropzoneWithWallet({ account }: { account: any }) {
   const [processedVideoName, setProcessedVideoName] = useState<string>('')
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [loadingMessage, setLoadingMessage] = useState<string>('')
   const [postLinks, setPostLinks] = useState<string[]>([''])
   const [firstSignature, setFirstSignature] = useState<string>('')
   const [secondSignature, setSecondSignature] = useState<string>('')
   const inputRef = useRef<HTMLInputElement | null>(null)
   const logoRef = useRef<HTMLImageElement | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Preload logo on mount
   React.useEffect(() => {
@@ -84,8 +86,15 @@ function DropzoneWithWallet({ account }: { account: any }) {
   const handleStepClick = useCallback((step: number) => {
     setCurrentStep(step)
     if (step === 1) {
-      // Reset to step 1 - clear processed image
+      // Reset to step 1 - clear processed image and abort any processing
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
       setProcessedImage('')
+      setProcessedVideoUrl('')
+      setLoading(false)
+      setLoadingMessage('')
     }
   }, [])
 
@@ -138,14 +147,19 @@ function DropzoneWithWallet({ account }: { account: any }) {
   }, [])
 
   // Process a video by drawing each frame to a canvas and overlaying the QR in the bottom-left, recording via MediaRecorder
-  const processVideoWithQr = useCallback(async (file: File, qrCanvas: HTMLCanvasElement): Promise<string> => {
+  const processVideoWithQr = useCallback(async (file: File, qrCanvas: HTMLCanvasElement, signal?: AbortSignal): Promise<string> => {
     const video = document.createElement('video')
     video.src = URL.createObjectURL(file)
     video.muted = true // required for autoplay without user gesture
     video.playsInline = true
     await new Promise<void>((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(new Error('Processing cancelled'))
+        return
+      }
       video.onloadedmetadata = () => resolve()
       video.onerror = () => reject(new Error('Failed to load video'))
+      signal?.addEventListener('abort', () => reject(new Error('Processing cancelled')))
     })
 
     const width = Math.floor(video.videoWidth)
@@ -209,8 +223,22 @@ function DropzoneWithWallet({ account }: { account: any }) {
     const useRVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype
     let rafId = 0
 
+    // Cleanup function
+    const cleanup = () => {
+      video.pause()
+      if (rafId) cancelAnimationFrame(rafId)
+      if (recorder.state !== 'inactive') recorder.stop()
+      URL.revokeObjectURL(video.src)
+    }
+
+    // Handle abort
+    if (signal) {
+      signal.addEventListener('abort', cleanup)
+    }
+
     if (useRVFC) {
-      const cb = (now: number, metadata: any) => {
+      const cb = (_now: number, _metadata: any) => {
+        if (signal?.aborted) return
         drawFrame()
         // schedule next frame while playing
         if (!video.paused && !video.ended) {
@@ -220,6 +248,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
       ;(video as any).requestVideoFrameCallback(cb)
     } else {
       const loop = () => {
+        if (signal?.aborted) return
         drawFrame()
         if (!video.paused && !video.ended) {
           rafId = requestAnimationFrame(loop)
@@ -228,22 +257,30 @@ function DropzoneWithWallet({ account }: { account: any }) {
       rafId = requestAnimationFrame(loop)
     }
 
-    await video.play()
+    try {
+      await video.play()
 
-    await new Promise<void>((resolve) => {
-      video.onended = () => resolve()
-    })
+      await new Promise<void>((resolve, reject) => {
+        video.onended = () => resolve()
+        if (signal) {
+          signal.addEventListener('abort', () => reject(new Error('Processing cancelled')))
+        }
+      })
 
-    // Stop drawing and recording
-    if (rafId) cancelAnimationFrame(rafId)
-    recorder.stop()
+      // Stop drawing and recording
+      if (rafId) cancelAnimationFrame(rafId)
+      recorder.stop()
 
-    const { url, ext: _ext } = await done
+      const { url, ext: _ext } = await done
 
-    // cleanup
-    URL.revokeObjectURL(video.src)
+      // cleanup
+      URL.revokeObjectURL(video.src)
 
-    return url
+      return url
+    } catch (error) {
+      cleanup()
+      throw error
+    }
   }, [])
 
   // Unified handler for both images and videos
@@ -251,11 +288,25 @@ function DropzoneWithWallet({ account }: { account: any }) {
     if (!file) return
     if (!signer || !address) return
 
+    // Create new abort controller for this processing
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
     setLoading(true)
     try {
       // Step 1: Sign transaction with memo
+      setLoadingMessage('Signing transaction...')
+
+      if (abortController.signal.aborted) {
+        throw new Error('Processing cancelled')
+      }
+
       const rpc = solana.client.rpc
       const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+
+      if (abortController.signal.aborted) {
+        throw new Error('Processing cancelled')
+      }
 
       const memoIx = getAddMemoInstruction({
         memo: "[Deepreal] Signature Generated"
@@ -271,26 +322,50 @@ function DropzoneWithWallet({ account }: { account: any }) {
       const txSignature = await signAndSendTransactionMessageWithSigners(transaction)
       const signatureString = getBase58Decoder().decode(txSignature)
 
+      if (abortController.signal.aborted) {
+        throw new Error('Processing cancelled')
+      }
+
       // Store the first signature for use in step 3
       setFirstSignature(signatureString)
 
       // Step 2: Generate QR code linking to verification page
+      setLoadingMessage('Generating QR code...')
       const verifyLink = `https://usedeepreal.com/verify/${signatureString}`
       const qrCanvas = await generateQrCanvas(verifyLink)
+
+      if (abortController.signal.aborted) {
+        throw new Error('Processing cancelled')
+      }
 
       // Branch by file type
       if (file.type.startsWith('image/')) {
         // Existing image path
+        setLoadingMessage('Processing image...')
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
         const img = new Image()
+        const imageUrl = URL.createObjectURL(file)
         await new Promise<void>((resolve, reject) => {
+          if (abortController.signal.aborted) {
+            reject(new Error('Processing cancelled'))
+            return
+          }
           img.onload = () => resolve()
           img.onerror = reject
-          img.src = URL.createObjectURL(file)
+          abortController.signal.addEventListener('abort', () => {
+            URL.revokeObjectURL(imageUrl)
+            reject(new Error('Processing cancelled'))
+          })
+          img.src = imageUrl
         })
+
+        if (abortController.signal.aborted) {
+          URL.revokeObjectURL(imageUrl)
+          throw new Error('Processing cancelled')
+        }
 
         canvas.width = img.width
         canvas.height = img.height
@@ -305,12 +380,15 @@ function DropzoneWithWallet({ account }: { account: any }) {
         ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20)
         ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize)
 
+        URL.revokeObjectURL(imageUrl)
+
         const processedDataUrl = canvas.toDataURL('image/png')
         setProcessedImage(processedDataUrl)
         setProcessedVideoUrl('')
         setCurrentStep(2)
       } else if (file.type.startsWith('video/')) {
-        const url = await processVideoWithQr(file, qrCanvas)
+        setLoadingMessage('Processing video...')
+        const url = await processVideoWithQr(file, qrCanvas, abortController.signal)
         // Infer preferred extension again for naming based on recorder support
         const preferred = ['video/mp4;codecs=h264','video/mp4','video/quicktime;codecs=h264','video/quicktime']
         const chosen = preferred.find(t => MediaRecorder.isTypeSupported(t)) || ''
@@ -324,10 +402,17 @@ function DropzoneWithWallet({ account }: { account: any }) {
       }
 
     } catch (error) {
-      console.error('Failed to overlay QR code:', error)
-      alert('Failed to create watermark. Please try again with a different file.')
+      // Don't show error if processing was cancelled
+      if (error instanceof Error && error.message === 'Processing cancelled') {
+        console.log('Processing cancelled by user')
+      } else {
+        console.error('Failed to overlay QR code:', error)
+        alert('Failed to create watermark. Please try again with a different file.')
+      }
     } finally {
       setLoading(false)
+      setLoadingMessage('')
+      abortControllerRef.current = null
     }
   }, [file, signer, address, solana.client.rpc, generateQrCanvas, processVideoWithQr])
 
@@ -440,17 +525,25 @@ function DropzoneWithWallet({ account }: { account: any }) {
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
+    // Don't allow file drop while processing
+    if (loading) return
     onFiles(e.dataTransfer.files)
-  }, [onFiles])
+  }, [onFiles, loading])
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
+    // Don't show drag state while processing
+    if (loading) return
     setIsDragging(true)
-  }, [])
+  }, [loading])
 
   const onDragLeave = useCallback(() => setIsDragging(false), [])
 
-  const onClick = useCallback(() => inputRef.current?.click(), [])
+  const onClick = useCallback(() => {
+    // Don't allow file selection while processing
+    if (loading) return
+    inputRef.current?.click()
+  }, [loading])
 
   const onInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onFiles(e.target.files)
@@ -517,9 +610,9 @@ function DropzoneWithWallet({ account }: { account: any }) {
           {currentStep === 1 && (
             <>
               <div className="space-y-2 mb-6">
-                <h2 className="text-2xl font-bold">Upload your content to generate a cryptographic watermark</h2>
+                <h2 className="text-2xl font-bold">Upload your content</h2>
                 <p className="text-muted-foreground">
-                  Upload your image or video. Deepreal will create a signed proof of authorship and prepare a QR watermark that links back to your verified record on Solana.
+                  Deepreal will create a signed proof of authorship and prepare a QR watermark that links back to your verified record on Solana.
                 </p>
               </div>
               <Card className="p-2 relative">
@@ -530,9 +623,21 @@ function DropzoneWithWallet({ account }: { account: any }) {
                     className="absolute top-4 right-4 h-8 w-8 rounded-full shadow-lg bg-white hover:bg-gray-100 text-black z-10"
                     onClick={(e) => {
                       e.stopPropagation();
+                      // Abort any ongoing processing
+                      if (abortControllerRef.current) {
+                        abortControllerRef.current.abort();
+                        abortControllerRef.current = null;
+                      }
+                      // Reset file input to allow re-uploading the same file
+                      if (inputRef.current) {
+                        inputRef.current.value = '';
+                      }
                       setFile(null);
                       setProcessedImage('');
+                      setProcessedVideoUrl('');
                       setCurrentStep(1);
+                      setLoading(false);
+                      setLoadingMessage('');
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -543,7 +648,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
                     isDragging
                       ? 'border-primary bg-primary/5'
                       : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-                  }`}
+                  } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   onDrop={onDrop}
                   onDragOver={onDragOver}
                   onDragLeave={onDragLeave}
@@ -607,7 +712,14 @@ function DropzoneWithWallet({ account }: { account: any }) {
                       disabled={!file || !signer || !address || loading}
                       className="w-full sm:w-auto"
                     >
-                      {loading ? 'Signing transaction...' : 'Generate watermark'}
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {loadingMessage}
+                        </>
+                      ) : (
+                        'Generate watermark'
+                      )}
                     </Button>
                   </div>
                 )}

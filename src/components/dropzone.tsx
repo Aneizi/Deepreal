@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Stepper } from '@/components/ui/stepper'
 import { useSolana } from '@/components/solana/use-solana.tsx'
+import { LandingPage } from '@/components/landing-page'
 import {
   createTransaction,
   signAndSendTransactionMessageWithSigners,
@@ -29,7 +30,7 @@ export default function Dropzone() {
 
   // Check if account exists before trying to use it
   if (!account) {
-    return <DropzoneNoWallet />
+    return <LandingPage />
   }
 
   return <DropzoneWithWallet account={account} />

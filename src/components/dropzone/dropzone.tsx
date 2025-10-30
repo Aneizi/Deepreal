@@ -1,9 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react'
-import { Upload, Trash2, Plus, X, Check, Loader2 } from 'lucide-react'
+import { Upload, Plus, X, Check, Loader2, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card } from '@/components/ui/card'
-import { Stepper } from '@/components/ui/stepper'
 import { useSolana } from '@/components/solana/use-solana.tsx'
 import {
   createTransaction,
@@ -346,84 +344,83 @@ function DropzoneWithWallet({ account }: { account: any }) {
 
   return (
     <>
-      <div className="min-h-screen flex flex-col xl:block p-4 bg-background">
-        <div className="w-full xl:w-[300px] xl:shrink-0 mb-12 xl:mb-0 xl:absolute xl:left-4 xl:top-20">
-          {/* Mobile/Tablet: Horizontal Stepper (no card) */}
-          <div className="xl:hidden">
-            <div className="flex justify-between items-start relative">
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
+        <div className="max-w-3xl mx-auto px-4 pt-8 pb-12">
+          {/* Elegant Progress Indicator */}
+          <div className="mb-12">
+            <div className="flex items-start justify-between max-w-2xl mx-auto">
               {steps.map((step, index) => {
                 const stepNumber = index + 1
                 const isCompleted = stepNumber < currentStep
                 const isCurrent = stepNumber === currentStep
-                const isUpcoming = stepNumber > currentStep
                 const isClickable = isCompleted && handleStepClick
 
                 return (
-                  <div key={index} className="flex flex-col items-center flex-1 relative">
+                  <React.Fragment key={index}>
                     <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold mb-2 bg-background ${
-                        isCompleted ? 'border-primary text-primary' :
-                        isCurrent ? 'border-primary text-primary' :
-                        'border-muted-foreground/25 text-muted-foreground'
-                      } ${isClickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                      className={`flex-1 flex flex-col items-center transition-all duration-300 ${
+                        isClickable ? 'cursor-pointer' : ''
+                      }`}
                       onClick={() => isClickable && handleStepClick(stepNumber)}
-                      role={isClickable ? 'button' : undefined}
-                      tabIndex={isClickable ? 0 : undefined}
                     >
-                      {isCompleted ? <Check className="h-5 w-5" /> : stepNumber}
+                      <div
+                        className={`flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full text-sm font-medium transition-all duration-300 ${
+                          isCurrent
+                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-110'
+                            : isCompleted
+                            ? 'bg-primary/10 text-primary ring-2 ring-primary/20'
+                            : 'bg-muted/50 text-muted-foreground'
+                        } ${isClickable ? 'hover:scale-105' : ''}`}
+                      >
+                        {isCompleted ? <Check className="h-5 w-5" /> : stepNumber}
+                      </div>
+                      <div
+                        className={`mt-2 text-xs font-medium transition-all duration-300 text-center px-1 ${
+                          isCurrent ? 'text-foreground opacity-100' : 'text-muted-foreground opacity-60'
+                        }`}
+                      >
+                        <span className="hidden sm:inline">{step.title}</span>
+                        <span className="sm:hidden">{step.title.split(' ')[0]}</span>
+                      </div>
                     </div>
-                    <p className={`text-xs text-center leading-tight ${
-                      isCurrent ? 'text-primary font-medium' : 
-                      isUpcoming ? 'text-muted-foreground' : 'text-foreground'
-                    }`}>
-                      {step.title.split(' ')[0]}
-                    </p>
-
-                    {/* Connecting line */}
                     {index < steps.length - 1 && (
-                      <div className={`absolute top-4 left-[calc(50%+1rem)] w-[calc(100%-2rem)] h-0.5 ${
-                        isCompleted ? 'bg-primary' : 'bg-muted-foreground/25'
-                      }`} />
+                      <div className="flex items-start pt-[1.25rem] sm:pt-[1.375rem] flex-shrink-0 px-2 sm:px-4">
+                        <div
+                          className={`h-0.5 w-8 sm:w-16 transition-all duration-500 ${
+                            isCompleted ? 'bg-primary' : 'bg-muted/30'
+                          }`}
+                        />
+                      </div>
                     )}
-                  </div>
+                  </React.Fragment>
                 )
               })}
             </div>
           </div>
 
-          {/* Desktop: Vertical Stepper (with card) */}
-          <div className="hidden xl:block">
-            <Card className="p-4">
-              <Stepper steps={steps} currentStep={currentStep} onStepClick={handleStepClick} />
-            </Card>
-          </div>
-        </div>
-
-        {/* Content - Centered on desktop */}
-        <div className="flex-1 xl:flex xl:justify-center xl:items-start xl:pt-0 space-y-2 xl:max-w-none xl:mx-0">
-          <div className="w-full xl:max-w-[600px] xl:space-y-2 space-y-2">
+          {/* Main Content Area */}
+          <div className="space-y-8">
           {currentStep === 1 && (
             <>
-              <div className="space-y-2 mb-6">
-                <h2 className="text-2xl font-bold">Upload your content</h2>
-                <p className="text-muted-foreground">
+              {/* Header */}
+              <div className="text-center space-y-3 mb-8">
+                <h1 className="text-3xl font-semibold tracking-tight">Upload your content</h1>
+                <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                   Deepreal will create a signed proof of authorship and prepare a QR watermark that links back to your verified record on Solana.
                 </p>
               </div>
-              <Card className="p-2 relative">
+
+              {/* Upload Zone */}
+              <div className="relative">
                 {file && (
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="absolute top-4 right-4 h-8 w-8 rounded-full shadow-lg bg-white hover:bg-gray-100 text-black z-10"
+                  <button
+                    className="absolute -top-3 -right-3 z-20 h-9 w-9 rounded-full bg-background shadow-lg border border-border hover:bg-muted transition-all duration-200 flex items-center justify-center group"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Abort any ongoing processing
                       if (abortControllerRef.current) {
                         abortControllerRef.current.abort();
                         abortControllerRef.current = null;
                       }
-                      // Reset file input to allow re-uploading the same file
                       if (inputRef.current) {
                         inputRef.current.value = '';
                       }
@@ -435,15 +432,16 @@ function DropzoneWithWallet({ account }: { account: any }) {
                       setLoadingMessage('');
                     }}
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                    <X className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  </button>
                 )}
+
                 <div
-                  className={`relative rounded-lg border-2 border-dashed transition-colors h-[300px] flex items-center justify-center ${
+                  className={`relative rounded-2xl transition-all duration-300 overflow-hidden ${
                     isDragging
-                      ? 'border-primary bg-primary/5'
-                      : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-                  } ${loading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      ? 'ring-2 ring-primary ring-offset-4 ring-offset-background shadow-2xl shadow-primary/20 scale-[1.02]'
+                      : 'ring-1 ring-border shadow-sm hover:shadow-md'
+                  } ${loading ? 'cursor-not-allowed' : 'cursor-pointer'} backdrop-blur-sm bg-card/50`}
                   onDrop={onDrop}
                   onDragOver={onDragOver}
                   onDragLeave={onDragLeave}
@@ -452,111 +450,127 @@ function DropzoneWithWallet({ account }: { account: any }) {
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter') onClick() }}
                 >
-            {!file ? (
-              <div className="flex flex-col items-center justify-center gap-4 p-12 text-center">
-                <div className="rounded-full bg-muted p-4">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Drop your image or video here, or click to browse</p>
-                  <p className="text-xs text-muted-foreground">PNG, JPG, MP4, MOV, WebM, or MKV files</p>
+                  {!file ? (
+                    <div className="flex flex-col items-center justify-center gap-6 p-16 min-h-[400px]">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
+                        <div className="relative rounded-full bg-gradient-to-br from-primary/10 to-primary/5 p-6 ring-1 ring-primary/10">
+                          <Upload className="h-12 w-12 text-primary" />
+                        </div>
+                      </div>
+                      <div className="space-y-3 text-center">
+                        <p className="text-lg font-medium">Drop your file here</p>
+                        <p className="text-sm text-muted-foreground">or click to browse</p>
+                        <p className="text-xs text-muted-foreground/70">
+                          Supports PNG, JPG, MP4, MOV, WebM, or MKV
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-8 min-h-[400px] flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-6 max-w-full">
+                        <div className="relative group">
+                          {file.type.startsWith('image/') ? (
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={file.name}
+                              className="max-h-[280px] max-w-full rounded-xl shadow-lg ring-1 ring-border object-contain"
+                            />
+                          ) : (
+                            <>
+                              <video
+                                src={URL.createObjectURL(file)}
+                                controls={!loading}
+                                preload="metadata"
+                                className="max-h-[280px] max-w-full rounded-xl shadow-lg ring-1 ring-border object-contain"
+                              />
+                              {loading && (
+                                <div className="absolute inset-0 bg-transparent" style={{ pointerEvents: 'none' }} />
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-center gap-2 text-center">
+                          <p className="text-sm font-medium truncate max-w-md">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    accept="image/png, image/jpeg, video/mp4, video/webm, video/quicktime"
+                    className="hidden"
+                    onChange={onInputChange}
+                  />
                 </div>
               </div>
-            ) : (
-              <div className="w-full h-full p-2 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2 max-w-full">
-                  <div className="relative">
-                    {file.type.startsWith('image/') ? (
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={file.name}
-                        className="w-auto h-auto object-contain max-h-[200px] max-w-full rounded-lg border"
-                      />
-                    ) : (
+
+              {/* Action Button */}
+              {file && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    onClick={overlayQRCodeOnImage}
+                    disabled={!file || !signer || !address || loading}
+                    size="lg"
+                    className="px-8 h-12 text-base font-medium rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200"
+                  >
+                    {loading ? (
                       <>
-                        <video
-                          src={URL.createObjectURL(file)}
-                          controls={!loading}
-                          preload="metadata"
-                          className="w-auto h-auto object-contain max-h-[200px] max-w-full rounded-lg border"
-                        />
-                        {loading && (
-                          <div className="absolute inset-0 bg-transparent" style={{ pointerEvents: 'none' }} />
-                        )}
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        <span>{loadingMessage}</span>
                       </>
+                    ) : (
+                      'Generate watermark'
                     )}
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <p className="text-xs font-medium truncate max-w-md">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
+                  </Button>
                 </div>
-              </div>
-            )}
-
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/png, image/jpeg, video/mp4, video/webm, video/quicktime"
-              className="hidden"
-              onChange={onInputChange}
-            />
-          </div>
-        </Card>
-
-                {file && (
-                  <div className="flex justify-center mt-6">
-                    <Button
-                      onClick={overlayQRCodeOnImage}
-                      disabled={!file || !signer || !address || loading}
-                      className="w-full sm:w-auto"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {loadingMessage}
-                        </>
-                      ) : (
-                        'Generate watermark'
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
+              )}
+            </>
+          )}
 
             {currentStep === 2 && (processedImage || processedVideoUrl) && (
               <>
-                <div className="space-y-2 mb-6">
-                  <h2 className="text-2xl font-bold">Download your verified, QR-coded content</h2>
-                  <p className="text-muted-foreground">
-                    Your media is now stamped with a QR code that proves it was vouched for by you. Download this watermarked version. It's ready to share anywhere.
+                {/* Header */}
+                <div className="text-center space-y-3 mb-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 ring-1 ring-green-500/20 mb-4">
+                    <Check className="w-8 h-8 text-green-600 dark:text-green-500" />
+                  </div>
+                  <h1 className="text-3xl font-semibold tracking-tight">Your content is ready</h1>
+                  <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                    Your media is now stamped with a QR code that proves it was vouched for by you. Download this watermarked version and share it anywhere.
                   </p>
                 </div>
-                <Card className="p-2 relative">
-                  <div className="relative rounded-lg border-2 border-dashed border-muted-foreground/25 h-[300px] flex items-center justify-center overflow-hidden">
+
+                {/* Preview */}
+                <div className="relative rounded-2xl overflow-hidden ring-1 ring-border shadow-lg backdrop-blur-sm bg-card/50">
+                  <div className="p-8 min-h-[400px] flex items-center justify-center bg-gradient-to-br from-muted/30 to-transparent">
                     {processedImage ? (
                       <img
                         src={processedImage}
-                        alt="Image with QR Code"
-                        className="w-auto h-auto object-contain max-h-[200px] max-w-full"
+                        alt="Watermarked content"
+                        className="max-h-[350px] max-w-full object-contain rounded-xl shadow-2xl ring-1 ring-border/50"
                       />
                     ) : processedVideoUrl ? (
                       <video
                         src={processedVideoUrl}
                         controls
-                        className="w-auto h-auto object-contain max-h-[200px] max-w-full"
+                        className="max-h-[350px] max-w-full object-contain rounded-xl shadow-2xl ring-1 ring-border/50"
                       />
                     ) : null}
                   </div>
-                </Card>
-                <div className="flex flex-col sm:flex-row justify-center gap-4 mt-6">
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
                   <Button
                     asChild
-                    variant="outline"
-                    className="w-full sm:w-auto"
+                    size="lg"
+                    className="px-8 h-12 text-base font-medium rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200"
                   >
                     <a
                       href={processedImage || processedVideoUrl}
@@ -567,9 +581,11 @@ function DropzoneWithWallet({ account }: { account: any }) {
                   </Button>
                   <Button
                     onClick={() => setCurrentStep(3)}
-                    className="w-full sm:w-auto"
+                    variant="outline"
+                    size="lg"
+                    className="px-8 h-12 text-base font-medium rounded-xl"
                   >
-                    Next
+                    Continue
                   </Button>
                 </div>
               </>
@@ -577,106 +593,185 @@ function DropzoneWithWallet({ account }: { account: any }) {
 
             {currentStep === 3 && (
               <>
-                <div className="space-y-2 mb-6">
-                  <h2 className="text-2xl font-bold">Share your verified content to social media</h2>
-                  <p className="text-muted-foreground">
+                {/* Header */}
+                <div className="text-center space-y-3 mb-8">
+                  <h1 className="text-3xl font-semibold tracking-tight">Share your content</h1>
+                  <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                     Post your watermarked content on any platform. Then paste the link back here so Deepreal can anchor your proof on Solana and make your authorship verifiable forever.
                   </p>
                 </div>
-                <Card className="p-3">
+
+                {/* Form */}
+                <div className="relative rounded-2xl overflow-hidden ring-1 ring-border backdrop-blur-sm bg-card/50 p-8">
                   {processedVideoUrl && (
-                    <p className="text-xs text-muted-foreground">Format: {processedVideoName?.split('.').pop()?.toUpperCase() || 'WEBM'} (depends on your browser capabilities)</p>
+                    <div className="mb-6 px-4 py-2 rounded-lg bg-muted/30 border border-border/50">
+                      <p className="text-xs text-muted-foreground">
+                        Video format: {processedVideoName?.split('.').pop()?.toUpperCase() || 'WEBM'} (browser-dependent)
+                      </p>
+                    </div>
                   )}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold mb-4">Post Links</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Add the links to your social media posts where you shared the watermarked content:
-                    </p>
-                    
+
+                  <div className="space-y-6">
                     {postLinks.map((link, index) => (
-                      <div key={index} className="space-y-2">
-                        <label className="text-sm font-medium">
-                          Link to post {index + 1}
+                      <div key={index} className="space-y-2.5">
+                        <label className="text-sm font-medium text-foreground/90">
+                          Post Link {index + 1}
                         </label>
-                        <div className="flex gap-2 items-center mt-1">
-                          <div className="flex-1">
-                            <Input
-                              type="url"
-                              placeholder={PLATFORM_PLACEHOLDERS[index % PLATFORM_PLACEHOLDERS.length]}
-                              value={link}
-                              onChange={(e) => updatePostLink(index, e.target.value)}
-                              className="w-full"
-                            />
-                          </div>
-                          {postLinks.length > 1 && (
-                            <Button
-                              variant="outline"
-                              size="sm"
+                        <div className="flex gap-2">
+                          <Input
+                            type="url"
+                            placeholder={PLATFORM_PLACEHOLDERS[index % PLATFORM_PLACEHOLDERS.length]}
+                            value={link}
+                            onChange={(e) => updatePostLink(index, e.target.value)}
+                            disabled={!!secondSignature}
+                            className="flex-1 h-11 rounded-xl border-border/50 bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                          />
+                          {postLinks.length > 1 && !secondSignature && (
+                            <button
                               onClick={() => removePostLink(index)}
-                              className="shrink-0"
+                              className="h-11 w-11 rounded-xl border border-border/50 bg-background/50 hover:bg-muted/50 transition-colors flex items-center justify-center group"
                             >
-                              <X className="h-4 w-4" />
-                            </Button>
+                              <X className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                            </button>
                           )}
                         </div>
                       </div>
                     ))}
-                    
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={addPostLink}
-                      className="w-fit"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add another link
-                    </Button>
+
+                    {!secondSignature && (
+                      <button
+                        onClick={addPostLink}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add another link
+                      </button>
+                    )}
                   </div>
-                </Card>
-                <div className="flex justify-center mt-6">
-                  <Button
-                    className="w-full sm:w-auto"
-                    disabled={postLinks.every(link => !link.trim()) || loading}
-                    onClick={submitPostLinks}
-                  >
-                    {loading ? 'Registering on Solana...' : 'Register post on Solana'}
-                  </Button>
                 </div>
 
-                {/* Display second signature after submission */}
+                {/* Submit Button - Only show if not registered */}
+                {!secondSignature && (
+                  <div className="flex justify-center pt-4">
+                    <Button
+                      onClick={submitPostLinks}
+                      disabled={postLinks.every(link => !link.trim()) || loading}
+                      size="lg"
+                      className="px-8 h-12 text-base font-medium rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Registering on Solana...
+                        </>
+                      ) : (
+                        'Register on Solana'
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Success State */}
                 {secondSignature && (
-                  <Card className="p-6 mt-6">
-                    <h3 className="text-lg font-semibold mb-4">Registration Complete!</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Original Watermark Signature</label>
-                        <code className="bg-muted p-2 rounded text-sm block mt-1 break-all">
-                          {firstSignature}
-                        </code>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Post Registration Signature</label>
-                        <code className="bg-muted p-2 rounded text-sm block mt-1 break-all">
-                          {secondSignature}
-                        </code>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          asChild
-                        >
-                          <a
-                            href={`https://explorer.solana.com/tx/${secondSignature}?cluster=devnet`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            View on Solana Explorer
-                          </a>
-                        </Button>
+                  <>
+                    <div className="relative rounded-2xl overflow-hidden ring-1 ring-green-500/20 backdrop-blur-sm bg-gradient-to-br from-green-500/5 to-emerald-500/5 p-8 mt-8">
+                      <div className="space-y-6">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-green-500/10 ring-1 ring-green-500/20 flex items-center justify-center">
+                            <Check className="w-6 h-6 text-green-600 dark:text-green-500" />
+                          </div>
+                          <div className="flex-1 pt-1">
+                            <h3 className="text-lg font-semibold mb-1">Registration Complete!</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Your content has been successfully registered on Solana
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Watermark Signature
+                            </label>
+                            <code className="block bg-background/80 backdrop-blur-sm px-4 py-3 rounded-lg text-xs font-mono border border-border/50 break-all">
+                              {firstSignature}
+                            </code>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Registration Signature
+                            </label>
+                            <code className="block bg-background/80 backdrop-blur-sm px-4 py-3 rounded-lg text-xs font-mono border border-border/50 break-all">
+                              {secondSignature}
+                            </code>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              className="rounded-lg"
+                            >
+                              <a
+                                href={`https://explorer.solana.com/tx/${secondSignature}?cluster=devnet`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                View on Solana Explorer
+                              </a>
+                            </Button>
+                            <Button
+                              size="sm"
+                              asChild
+                              className="rounded-lg"
+                            >
+                              <a
+                                href={`/verify/${firstSignature}`}
+                                className="inline-flex items-center gap-2"
+                              >
+                                <Check className="h-4 w-4" />
+                                View Verification Page
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </Card>
+
+                    {/* Stamp Other Content Button */}
+                    <div className="flex justify-center pt-8">
+                      <Button
+                        onClick={() => {
+                          // Reset everything to start over
+                          if (abortControllerRef.current) {
+                            abortControllerRef.current.abort();
+                            abortControllerRef.current = null;
+                          }
+                          if (inputRef.current) {
+                            inputRef.current.value = '';
+                          }
+                          setFile(null);
+                          setProcessedImage('');
+                          setProcessedVideoUrl('');
+                          setCurrentStep(1);
+                          setLoading(false);
+                          setLoadingMessage('');
+                          setFirstSignature('');
+                          setSecondSignature('');
+                          setPostLinks(['']);
+                        }}
+                        variant="outline"
+                        size="lg"
+                        className="px-8 h-12 text-base font-medium rounded-xl"
+                      >
+                        Stamp other content
+                      </Button>
+                    </div>
+                  </>
                 )}
               </>
             )}

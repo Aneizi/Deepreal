@@ -81,7 +81,7 @@ export function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
             {isWalletConnected ? (
               <Button className="font-medium" onClick={handleMainButtonClick}>
-                Protect your content
+                Make Your Mark
               </Button>
             ) : (
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

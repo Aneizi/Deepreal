@@ -13,7 +13,7 @@ export const PLATFORM_PLACEHOLDERS = [
 ]
 
 export const STEPS = [
-  { title: 'Upload and protect the content' },
-  { title: 'Download watermarked version' },
-  { title: 'Share and link the posts' },
+  { title: 'Upload Content' },
+  { title: 'Download and Share' },
+  { title: 'Link Posts' },
 ]

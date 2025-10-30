@@ -99,7 +99,23 @@ function DropzoneWithWallet({ account }: { account: any }) {
     }
   }, [postLinks.length])
 
+  // Generate stamped filename from original file
+  const getStampedFilename = useCallback(() => {
+    if (!file) return 'content_stamped'
 
+    const originalName = file.name
+    const lastDotIndex = originalName.lastIndexOf('.')
+
+    if (lastDotIndex === -1) {
+      // No extension found
+      return `${originalName}_stamped`
+    }
+
+    const nameWithoutExt = originalName.substring(0, lastDotIndex)
+    const extension = originalName.substring(lastDotIndex)
+
+    return `${nameWithoutExt}_stamped${extension}`
+  }, [file])
 
   // Unified handler for both images and videos
   const overlayQRCodeOnImage = useCallback(async () => {
@@ -544,7 +560,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
                   >
                     <a
                       href={processedImage || processedVideoUrl}
-                      download={processedImage ? 'image-with-qr.png' : (processedVideoName || 'video-with-qr.webm')}
+                      download={getStampedFilename()}
                     >
                       Download file
                     </a>

@@ -648,7 +648,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
                     isDragging
                       ? 'border-primary bg-primary/5'
                       : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-                  } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  } ${loading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                   onDrop={onDrop}
                   onDragOver={onDragOver}
                   onDragLeave={onDragLeave}
@@ -663,8 +663,8 @@ function DropzoneWithWallet({ account }: { account: any }) {
                   <Upload className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Drop your image here, or click to browse</p>
-                  <p className="text-xs text-muted-foreground">PNG or JPG files only</p>
+                  <p className="text-sm font-medium">Drop your image or video here, or click to browse</p>
+                  <p className="text-xs text-muted-foreground">PNG, JPG, MP4, MOV, WebM, or MKV files</p>
                 </div>
               </div>
             ) : (
@@ -678,11 +678,17 @@ function DropzoneWithWallet({ account }: { account: any }) {
                         className="w-auto h-auto object-contain max-h-[200px] max-w-full rounded-lg border"
                       />
                     ) : (
-                      <video
-                        src={URL.createObjectURL(file)}
-                        controls
-                        className="w-auto h-auto object-contain max-h-[200px] max-w-full rounded-lg border"
-                      />
+                      <>
+                        <video
+                          src={URL.createObjectURL(file)}
+                          controls={!loading}
+                          preload="metadata"
+                          className="w-auto h-auto object-contain max-h-[200px] max-w-full rounded-lg border"
+                        />
+                        {loading && (
+                          <div className="absolute inset-0 bg-transparent" style={{ pointerEvents: 'none' }} />
+                        )}
+                      </>
                     )}
                   </div>
                   <div className="flex flex-col items-center gap-1">

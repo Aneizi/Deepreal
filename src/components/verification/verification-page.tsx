@@ -2,21 +2,8 @@ import { useParams } from 'react-router'
 import { Check, ExternalLink, Copy, Shield, Loader2, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
-import { createSolanaRpc, getBase58Encoder, type Address } from 'gill'
-
-interface VerificationData {
-  isVerified: boolean
-  walletAddress: string
-  timestamp: string
-  socialLinks: string[]
-  isPending: boolean // True if first transaction exists but no social links registered yet
-  originalSignature: string // The first signature (from QR code)
-  allRegistrations: Array<{
-    signature: string
-    timestamp: string
-    links: string[]
-  }> // All second signatures found for this content
-}
+import { type VerificationData } from './types'
+import { fetchVerificationData } from './blockchain-fetcher'
 
 export default function VerificationPage() {
   const { signature } = useParams<{ signature: string }>()
@@ -27,145 +14,15 @@ export default function VerificationPage() {
 
   // Fetch transaction data from Solana
   useEffect(() => {
-    async function fetchVerificationData() {
+    async function loadVerificationData() {
       if (!signature) return
 
       setLoading(true)
       setError(null)
 
       try {
-        // Create standalone RPC client for devnet (no wallet required)
-        const rpc = createSolanaRpc('https://api.devnet.solana.com')
-
-        // Get the transaction to verify it exists and get the wallet address
-        console.log('[VERIFICATION PAGE] Signature from URL:', signature)
-        const txResponse = await rpc.getTransaction(signature as any).send()
-
-        if (!txResponse) {
-          throw new Error('Transaction not found')
-        }
-
-        // Extract wallet address (fee payer) and block time
-        const walletAddress = txResponse.transaction.message.accountKeys[0] as Address
-        const blockTime = txResponse.blockTime
-
-        console.log('[VERIFICATION PAGE] Wallet address:', walletAddress)
-        console.log('[VERIFICATION PAGE] Transaction block time:', blockTime)
-
-        // Check if this signature is actually the SECOND transaction (contains another signature in memo)
-        let firstSignature = signature
-        const MEMO_PROGRAM_ID = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
-
-        const instructions = txResponse.transaction.message.instructions
-        const accountKeys = txResponse.transaction.message.accountKeys
-
-        for (const instruction of instructions) {
-          const programId = accountKeys[instruction.programIdIndex as number]
-          if (programId !== MEMO_PROGRAM_ID) continue
-
-          try {
-            // Decode memo instruction
-            const dataBytes = getBase58Encoder().encode(instruction.data)
-            const decoder = new TextDecoder()
-            const memoText = decoder.decode(dataBytes)
-
-            console.log('[VERIFICATION PAGE] Found memo in provided signature:', memoText)
-
-            // Check if this memo contains a first signature (format: [Deepreal] {firstSig} | ...)
-            if (memoText.startsWith('[Deepreal] ') && memoText.includes(' | ')) {
-              const parts = memoText.split(' | ')
-              const extractedSig = parts[0].replace('[Deepreal] ', '').trim()
-
-              // If we found a signature in the memo, this is the second transaction
-              if (extractedSig && extractedSig !== signature) {
-                console.log('[VERIFICATION PAGE] Detected second signature, extracting first:', extractedSig)
-                firstSignature = extractedSig
-                break
-              }
-            }
-          } catch (e) {
-            console.error('[VERIFICATION PAGE] Error parsing memo:', e)
-            continue
-          }
-        }
-
-        console.log('[VERIFICATION PAGE] Using first signature for search:', firstSignature)
-
-        // Only fetch signatures that came AFTER the first transaction
-        // Using 'until' parameter to stop at the first signature (exclusive)
-        const signaturesResponse = await rpc.getSignaturesForAddress(walletAddress, {
-          until: firstSignature as any,
-          limit: 100
-        }).send()
-
-        console.log('[VERIFICATION PAGE] Fetching signatures after first tx:', signaturesResponse.length, 'transactions')
-
-        // Find ALL transactions that contain the first signature in memo
-        const allRegistrations: Array<{ signature: string; timestamp: string; links: string[] }> = []
-
-        for (const sig of signaturesResponse) {
-          const txData = await rpc.getTransaction(sig.signature).send()
-
-          if (!txData) continue
-
-          // Check if transaction has memo instruction
-          const txInstructions = txData.transaction.message.instructions
-          const txAccountKeys = txData.transaction.message.accountKeys
-
-          for (const instruction of txInstructions) {
-            // Check if this is a memo instruction
-            const programId = txAccountKeys[instruction.programIdIndex as number]
-            if (programId !== MEMO_PROGRAM_ID) continue
-
-            try {
-              // Decode base58 instruction data to bytes, then to UTF-8 string
-              const dataBytes = getBase58Encoder().encode(instruction.data)
-              const decoder = new TextDecoder()
-              const memoText = decoder.decode(dataBytes)
-
-              console.log('[VERIFICATION PAGE] Found memo:', memoText)
-
-              // Check if memo contains our first signature
-              // Format: [Deepreal] {firstSignature} | {JSON.stringify(links)}
-              if (memoText.includes(`[Deepreal] ${firstSignature}`)) {
-                // Extract links from memo
-                const parts = memoText.split(' | ')
-                if (parts.length > 1) {
-                  const links = JSON.parse(parts[1])
-                  const txBlockTime = txData.blockTime
-
-                  allRegistrations.push({
-                    signature: sig.signature as string,
-                    timestamp: txBlockTime ? new Date(Number(txBlockTime) * 1000).toISOString() : new Date().toISOString(),
-                    links
-                  })
-
-                  console.log('[VERIFICATION PAGE] Found registration:', { signature: sig.signature, links })
-                }
-                break
-              }
-            } catch (e) {
-              // Skip invalid instructions
-              console.error('[VERIFICATION PAGE] Error parsing memo:', e)
-              continue
-            }
-          }
-        }
-
-        console.log('[VERIFICATION PAGE] Total registrations found:', allRegistrations.length)
-
-        // Use the most recent registration (first in the array since results are sorted newest first)
-        const socialLinks = allRegistrations.length > 0 ? allRegistrations[0].links : []
-
-        setVerificationData({
-          isVerified: true,
-          walletAddress,
-          timestamp: blockTime ? new Date(Number(blockTime) * 1000).toISOString() : new Date().toISOString(),
-          socialLinks,
-          isPending: socialLinks.length === 0, // Pending if no social links registered yet
-          originalSignature: firstSignature, // Store the first signature for display
-          allRegistrations // Store all registrations for display
-        })
+        const data = await fetchVerificationData(signature)
+        setVerificationData(data)
       } catch (err) {
         console.error('Error fetching verification data:', err)
         setError(err instanceof Error ? err.message : 'Failed to fetch verification data')
@@ -174,7 +31,7 @@ export default function VerificationPage() {
       }
     }
 
-    fetchVerificationData()
+    loadVerificationData()
   }, [signature])
 
   const copyToClipboard = async (text: string) => {
@@ -200,15 +57,30 @@ export default function VerificationPage() {
   const extractPlatformFromUrl = (url: string): string => {
     try {
       const hostname = new URL(url).hostname
-      if (hostname.includes('twitter') || hostname.includes('x.com')) return 'X (Twitter)'
-      if (hostname.includes('instagram')) return 'Instagram'
-      if (hostname.includes('facebook')) return 'Facebook'
-      if (hostname.includes('tiktok')) return 'TikTok'
-      if (hostname.includes('linkedin')) return 'LinkedIn'
-      if (hostname.includes('youtube')) return 'YouTube'
-      if (hostname.includes('snapchat')) return 'Snapchat'
-      if (hostname.includes('threads')) return 'Threads'
-      return hostname
+
+      switch (true) {
+        case hostname.includes('twitter'):
+        case hostname.includes('x.com'):
+          return 'X (Twitter)'
+        case hostname.includes('instagram'):
+          return 'Instagram'
+        case hostname.includes('facebook'):
+          return 'Facebook'
+        case hostname.includes('tiktok'):
+          return 'TikTok'
+        case hostname.includes('linkedin'):
+          return 'LinkedIn'
+        case hostname.includes('youtube'):
+          return 'YouTube'
+        case hostname.includes('snapchat'):
+          return 'Snapchat'
+        case hostname.includes('threads'):
+          return 'Threads'
+        case hostname.includes('reddit'):
+          return 'Reddit'
+        default:
+          return hostname
+      }
     } catch {
       return 'Unknown Platform'
     }

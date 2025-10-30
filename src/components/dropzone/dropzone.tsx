@@ -1,5 +1,4 @@
 import React, { useCallback, useRef, useState } from 'react'
-import QRCode from 'qrcode'
 import { Upload, Trash2, Plus, X, Check, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,14 +13,12 @@ import {
 } from 'gill'
 import { getAddMemoInstruction } from 'gill/programs'
 import { useWalletUiSigner } from '@wallet-ui/react'
+import { generateQrCanvas } from './qr-generator'
+import { processVideoWithQr } from './video-processor'
+import { validateFile } from './file-validator'
+import { type AcceptedFile, PLATFORM_PLACEHOLDERS, STEPS } from './types'
 
-type AcceptedFile = File | null
-
-const steps = [
-  { title: 'Upload and protect the content' },
-  { title: 'Download watermarked version' },
-  { title: 'Share and link the posts' },
-]
+const steps = STEPS
 
 export default function Dropzone() {
   const solana = useSolana()
@@ -71,17 +68,6 @@ function DropzoneWithWallet({ account }: { account: any }) {
     logoRef.current = logo
   }, [])
 
-  // Platform placeholder examples
-  const platformPlaceholders = [
-    'https://x.com/username/status/123456789',
-    'https://instagram.com/p/ABC123DEF',
-    'https://facebook.com/username/posts/123456789',
-    'https://tiktok.com/@username/video/123456789',
-    'https://linkedin.com/posts/username_activity-123456789',
-    'https://youtube.com/watch?v=ABC123DEF',
-    'https://snapchat.com/t/ABC123DEF',
-    'https://threads.net/@username/post/ABC123DEF'
-  ]
 
   const handleStepClick = useCallback((step: number) => {
     setCurrentStep(step)
@@ -114,174 +100,6 @@ function DropzoneWithWallet({ account }: { account: any }) {
   }, [postLinks.length])
 
 
-  // Helper to generate a QR code canvas with our logo
-  const generateQrCanvas = useCallback(async (verifyLink: string) => {
-    const qrCanvas = document.createElement('canvas')
-    await QRCode.toCanvas(qrCanvas, verifyLink, {
-      width: 256,
-      margin: 2,
-      errorCorrectionLevel: 'H',
-      color: { dark: '#000000', light: '#ffffff' }
-    })
-
-    const qrCtx = qrCanvas.getContext('2d')
-    if (qrCtx && logoRef.current) {
-      if (!logoRef.current.complete) {
-        await new Promise<void>((resolve) => {
-          logoRef.current!.onload = () => resolve()
-        })
-      }
-      const logoSize = qrCanvas.width * 0.2
-      const logoX = (qrCanvas.width - logoSize) / 2
-      const logoY = (qrCanvas.height - logoSize) / 2
-
-      // white background circle for logo
-      qrCtx.fillStyle = '#ffffff'
-      qrCtx.beginPath()
-      qrCtx.arc(qrCanvas.width / 2, qrCanvas.height / 2, logoSize * 0.6, 0, 2 * Math.PI)
-      qrCtx.fill()
-
-      qrCtx.drawImage(logoRef.current, logoX, logoY, logoSize, logoSize)
-    }
-    return qrCanvas
-  }, [])
-
-  // Process a video by drawing each frame to a canvas and overlaying the QR in the bottom-left, recording via MediaRecorder
-  const processVideoWithQr = useCallback(async (file: File, qrCanvas: HTMLCanvasElement, signal?: AbortSignal): Promise<string> => {
-    const video = document.createElement('video')
-    video.src = URL.createObjectURL(file)
-    video.muted = true // required for autoplay without user gesture
-    video.playsInline = true
-    await new Promise<void>((resolve, reject) => {
-      if (signal?.aborted) {
-        reject(new Error('Processing cancelled'))
-        return
-      }
-      video.onloadedmetadata = () => resolve()
-      video.onerror = () => reject(new Error('Failed to load video'))
-      signal?.addEventListener('abort', () => reject(new Error('Processing cancelled')))
-    })
-
-    const width = Math.floor(video.videoWidth)
-    const height = Math.floor(video.videoHeight)
-
-    const canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
-    const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('Canvas not supported')
-
-    // Precompute QR size and position (bottom-left, ~20% of min dimension)
-    const qrSize = Math.floor(Math.min(width, height) * 0.2)
-    const padding = Math.floor(Math.min(width, height) * 0.02)
-    const qrX = padding
-    const qrY = height - qrSize - padding
-
-    // Prepare recording of the canvas stream
-    const fps = Math.min(30, Math.max(15, Math.round((video as any).getVideoPlaybackQuality?.().totalVideoFrames ? 30 : 30)))
-    const stream = (canvas as HTMLCanvasElement).captureStream(fps)
-
-    const mimeCandidates = [
-      'video/mp4;codecs=h264',
-      'video/mp4',
-      'video/quicktime;codecs=h264',
-      'video/quicktime',
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm'
-    ]
-    const mimeType = mimeCandidates.find(t => MediaRecorder.isTypeSupported(t)) || ''
-    const ext = mimeType.includes('quicktime') ? 'mov' : (mimeType.includes('mp4') ? 'mp4' : 'webm')
-    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
-
-    const chunks: BlobPart[] = []
-    recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data) }
-
-    const done = new Promise<{ url: string; ext: string }>((resolve) => {
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: mimeType || 'video/webm' })
-        const url = URL.createObjectURL(blob)
-        resolve({ url, ext })
-      }
-    })
-
-    recorder.start(200) // collect data every 200ms
-
-    // Draw loop synced to the video frames
-    const drawFrame = () => {
-      // draw the current video frame
-      ctx.drawImage(video, 0, 0, width, height)
-
-      // Draw semi-transparent white background behind QR
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-      ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20)
-
-      // Draw the QR
-      ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize)
-    }
-
-    const useRVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype
-    let rafId = 0
-
-    // Cleanup function
-    const cleanup = () => {
-      video.pause()
-      if (rafId) cancelAnimationFrame(rafId)
-      if (recorder.state !== 'inactive') recorder.stop()
-      URL.revokeObjectURL(video.src)
-    }
-
-    // Handle abort
-    if (signal) {
-      signal.addEventListener('abort', cleanup)
-    }
-
-    if (useRVFC) {
-      const cb = (_now: number, _metadata: any) => {
-        if (signal?.aborted) return
-        drawFrame()
-        // schedule next frame while playing
-        if (!video.paused && !video.ended) {
-          ;(video as any).requestVideoFrameCallback(cb)
-        }
-      }
-      ;(video as any).requestVideoFrameCallback(cb)
-    } else {
-      const loop = () => {
-        if (signal?.aborted) return
-        drawFrame()
-        if (!video.paused && !video.ended) {
-          rafId = requestAnimationFrame(loop)
-        }
-      }
-      rafId = requestAnimationFrame(loop)
-    }
-
-    try {
-      await video.play()
-
-      await new Promise<void>((resolve, reject) => {
-        video.onended = () => resolve()
-        if (signal) {
-          signal.addEventListener('abort', () => reject(new Error('Processing cancelled')))
-        }
-      })
-
-      // Stop drawing and recording
-      if (rafId) cancelAnimationFrame(rafId)
-      recorder.stop()
-
-      const { url, ext: _ext } = await done
-
-      // cleanup
-      URL.revokeObjectURL(video.src)
-
-      return url
-    } catch (error) {
-      cleanup()
-      throw error
-    }
-  }, [])
 
   // Unified handler for both images and videos
   const overlayQRCodeOnImage = useCallback(async () => {
@@ -332,7 +150,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
       // Step 2: Generate QR code linking to verification page
       setLoadingMessage('Generating QR code...')
       const verifyLink = `https://usedeepreal.com/verify/${signatureString}`
-      const qrCanvas = await generateQrCanvas(verifyLink)
+      const qrCanvas = await generateQrCanvas(verifyLink, logoRef.current || undefined)
 
       if (abortController.signal.aborted) {
         throw new Error('Processing cancelled')
@@ -414,7 +232,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
       setLoadingMessage('')
       abortControllerRef.current = null
     }
-  }, [file, signer, address, solana.client.rpc, generateQrCanvas, processVideoWithQr])
+  }, [file, signer, address, solana.client.rpc])
 
   // Function to submit post links to Solana
   const submitPostLinks = useCallback(async () => {
@@ -471,55 +289,16 @@ function DropzoneWithWallet({ account }: { account: any }) {
 
   const onFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return
+
     const f = files[0]
-    const allowed = ['image/png', 'image/jpeg', 'video/mp4', 'video/webm', 'video/quicktime']
-    if (!allowed.includes(f.type)) {
-      alert('Only PNG, JPG, MP4, WebM, or MOV files are allowed')
+    const result = await validateFile(f)
+
+    if (!result.isValid) {
+      alert(result.error || 'Invalid file')
       return
     }
 
-    try {
-      if (f.type.startsWith('image/')) {
-        const img = new Image()
-        const imageUrl = URL.createObjectURL(f)
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => {
-            URL.revokeObjectURL(imageUrl)
-            if (img.width < 128 || img.height < 128) {
-              reject(new Error(`Image is too small. The minimum size is 128x128 pixels. Your image is ${img.width}x${img.height} pixels.`))
-              return
-            }
-            resolve()
-          }
-          img.onerror = () => {
-            URL.revokeObjectURL(imageUrl)
-            reject(new Error('Failed to load image'))
-          }
-          img.src = imageUrl
-        })
-      } else if (f.type.startsWith('video/')) {
-        const v = document.createElement('video')
-        v.src = URL.createObjectURL(f)
-        await new Promise<void>((resolve, reject) => {
-          v.onloadedmetadata = () => {
-            URL.revokeObjectURL(v.src)
-            if (v.videoWidth < 128 || v.videoHeight < 128) {
-              reject(new Error(`Video is too small. The minimum size is 128x128 pixels. Your video is ${v.videoWidth}x${v.videoHeight} pixels.`))
-              return
-            }
-            resolve()
-          }
-          v.onerror = () => {
-            URL.revokeObjectURL(v.src)
-            reject(new Error('Failed to load video'))
-          }
-        })
-      }
-
-      setFile(f)
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to validate image/video')
-    }
+    setFile(f)
   }, [])
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -807,7 +586,7 @@ function DropzoneWithWallet({ account }: { account: any }) {
                           <div className="flex-1">
                             <Input
                               type="url"
-                              placeholder={platformPlaceholders[index % platformPlaceholders.length]}
+                              placeholder={PLATFORM_PLACEHOLDERS[index % PLATFORM_PLACEHOLDERS.length]}
                               value={link}
                               onChange={(e) => updatePostLink(index, e.target.value)}
                               className="w-full"

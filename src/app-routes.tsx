@@ -1,9 +1,9 @@
 import { useRoutes } from 'react-router'
 import { lazy } from 'react'
 
-const Dropzone = lazy(() => import('@/components/dropzone.tsx'))
+const Dropzone = lazy(() => import('@/components/dropzone'))
 const SignTx = lazy(() => import('@/components/sign-tx.tsx'))
-const VerificationPage = lazy(() => import('@/components/verification-page.tsx'))
+const VerificationPage = lazy(() => import('@/components/verification'))
 
 export function AppRoutes() {
   return useRoutes([

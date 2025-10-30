@@ -143,7 +143,7 @@ export function LandingPage() {
             <CardHeader className="text-left space-y-8">
               <div className="space-y-2">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Step 1</p>
-                <CardTitle className="text-xl leading-[30px]">Protect your content with a digital signature</CardTitle>
+                <CardTitle className="text-xl leading-[30px]">Upload your content</CardTitle>
               </div>
               <CardDescription className="text-left text-base">
                 Upload your photo or video and we'll create a cryptographic watermark that proves it's yours. Your signature travels with the content wherever it's shared.
@@ -155,10 +155,10 @@ export function LandingPage() {
             <CardHeader className="text-left space-y-8">
               <div className="space-y-2">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Step 2</p>
-                <CardTitle className="text-xl leading-[30px]">Share anywhere with built-in verification</CardTitle>
+                <CardTitle className="text-xl leading-[30px]">Download and share</CardTitle>
               </div>
               <CardDescription className="text-left text-base">
-                Download your stamped content and post it on any platform. The watermark keeps your authorship visible and verifiable, even after reposts or edits.
+                Download your stamped content and post it on any platform. The watermark keeps your authorship visible and verifiable, even after reposts or edits. Keep the link(s) to your post(s) handy for the next step!
               </CardDescription>
             </CardHeader>
           </Card>
@@ -167,10 +167,10 @@ export function LandingPage() {
             <CardHeader className="text-left space-y-8">
               <div className="space-y-2">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Step 3</p>
-                <CardTitle className="text-xl leading-[30px]">Keep your proof on the blockchain forever</CardTitle>
+                <CardTitle className="text-xl leading-[30px]">Point to the source</CardTitle>
               </div>
               <CardDescription className="text-left text-base">
-                Every piece of content is stored with a permanent record on Solana, giving you timeless proof that it came from you and no one else.
+                You paste your post's link(s) as the final step. Whenever someone scans the QR-code, it'll lead them to a page where they can verify your public address, your signature, and the content's original link(s).
               </CardDescription>
             </CardHeader>
           </Card>

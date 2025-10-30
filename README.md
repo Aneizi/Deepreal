@@ -1,4 +1,4 @@
-# addy
+# Deepreal
 
 This is a React/Vite app containing:
 
@@ -10,11 +10,6 @@ This is a React/Vite app containing:
 
 ### Installation
 
-#### Download the template
-
-```shell
-npx create-solana-dapp@latest -t gh:solana-foundation/templates/gill/addy
-```
 
 #### Install Dependencies
 

@@ -26,3 +26,9 @@ dist-ssr
 # TypeScript cache
 *.tsbuildinfo
 /tmp
+
+#ai
+.claude
+
+#ai
+.claude

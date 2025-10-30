@@ -7,7 +7,7 @@ import { fetchVerificationData } from './blockchain-fetcher'
 
 export default function VerificationPage() {
   const { signature } = useParams<{ signature: string }>()
-  const [copied, setCopied] = useState(false)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [verificationData, setVerificationData] = useState<VerificationData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -34,11 +34,11 @@ export default function VerificationPage() {
     loadVerificationData()
   }, [signature])
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (text: string, fieldName: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setCopiedField(fieldName)
+      setTimeout(() => setCopiedField(null), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
     }
@@ -54,9 +54,17 @@ export default function VerificationPage() {
     })
   }
 
+  const ensureHttps = (url: string): string => {
+    // If URL doesn't start with http:// or https://, add https://
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`
+    }
+    return url
+  }
+
   const extractPlatformFromUrl = (url: string): string => {
     try {
-      const hostname = new URL(url).hostname
+      const hostname = new URL(ensureHttps(url)).hostname
 
       switch (true) {
         case hostname.includes('twitter'):
@@ -216,9 +224,9 @@ export default function VerificationPage() {
                   variant="ghost"
                   size="sm"
                   className="shrink-0"
-                  onClick={() => copyToClipboard(verificationData.originalSignature || "")}
+                  onClick={() => copyToClipboard(verificationData.originalSignature || "", 'signature')}
                 >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copiedField === 'signature' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -233,9 +241,9 @@ export default function VerificationPage() {
                   variant="ghost"
                   size="sm"
                   className="shrink-0"
-                  onClick={() => copyToClipboard(verificationData.walletAddress)}
+                  onClick={() => copyToClipboard(verificationData.walletAddress, 'wallet')}
                 >
-                  <Copy className="h-4 w-4" />
+                  {copiedField === 'wallet' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -270,7 +278,7 @@ export default function VerificationPage() {
                     className="shrink-0 ml-2"
                     asChild
                   >
-                    <a href={url} target="_blank" rel="noopener noreferrer">
+                    <a href={ensureHttps(url)} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-4 w-4 mr-1.5" />
                       <span className="hidden sm:inline">View</span>
                     </a>

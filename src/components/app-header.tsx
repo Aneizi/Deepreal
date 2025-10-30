@@ -10,18 +10,22 @@ export function AppHeader({ links = [] }: { links: { label: string; path: string
   const { pathname } = useLocation()
   const [showMenu, setShowMenu] = useState(false)
 
+  // Suppress unused variable warnings - links and isActive are kept for potential future use
+  void links
   function isActive(path: string) {
     return path === '/' ? pathname === '/' : pathname.startsWith(path)
   }
+  void isActive
 
   return (
-    <header className="relative z-50 px-4 py-2 bg-card/50">
+    <header className="relative z-50 px-4 bg-card/50">
       <div className="mx-auto flex justify-between items-center">
-        <div className="flex items-baseline gap-4">
-          <Link to="/" className="text-xl hover:text-neutral-500 dark:hover:text-white">
-            <span>Deepreal</span>
+        <div className="flex items-center gap-4">
+          <Link to="/" className="hover:opacity-80 flex items-center my-4">
+            <img src="/logo.svg" alt="Deepreal" className="h-8 w-auto object-contain brightness-0 dark:brightness-100" />
+            {/* <span>Deepreal</span> */}
           </Link>
-          <div className="hidden md:flex items-center">
+          {/* <div className="hidden md:flex items-center">
             <ul className="flex gap-4 flex-nowrap items-center">
               {links.map(({ label, path }) => (
                 <li key={path}>
@@ -34,7 +38,7 @@ export function AppHeader({ links = [] }: { links: { label: string; path: string
                 </li>
               ))}
             </ul>
-          </div>
+          </div> */}
         </div>
 
         <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setShowMenu(!showMenu)}>
@@ -48,26 +52,13 @@ export function AppHeader({ links = [] }: { links: { label: string; path: string
         </div>
 
         {showMenu && (
-          <div className="md:hidden fixed inset-x-0 top-[52px] bottom-0 bg-neutral-100/95 dark:bg-neutral-900/95 backdrop-blur-sm">
+          <div className="md:hidden fixed inset-x-0 top-[68px] bottom-0 bg-neutral-100/95 dark:bg-neutral-900/95 backdrop-blur-sm">
             <div className="flex flex-col p-4 gap-4 border-t dark:border-neutral-800">
               <div className="flex justify-end items-center gap-4">
                 <WalletDropdown />
                 <ClusterDropdown />
                 <ThemeSelect />
               </div>
-              <ul className="flex flex-col gap-4">
-                {links.map(({ label, path }) => (
-                  <li key={path}>
-                    <Link
-                      className={`block text-lg py-2  ${isActive(path) ? 'text-foreground' : 'text-muted-foreground'} hover:text-foreground`}
-                      to={path}
-                      onClick={() => setShowMenu(false)}
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
             </div>
           </div>
         )}

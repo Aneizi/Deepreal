@@ -1,7 +1,7 @@
 import { useRoutes } from 'react-router'
 import { lazy } from 'react'
+import { LandingPage } from '@/components/landing-page'
 
-const LandingPage = lazy(() => import('@/components/landing-page'))
 const Dropzone = lazy(() => import('@/components/dropzone'))
 const SignTx = lazy(() => import('@/components/sign-tx.tsx'))
 const VerificationInput = lazy(() => import('@/components/verification/verification-input'))
@@ -11,7 +11,7 @@ export function AppRoutes() {
   return useRoutes([
     { index: true, element: <LandingPage />},
     {
-      path: 'stamp',
+      path: 'upload',
       element: <Dropzone />
     },
     {

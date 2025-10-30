@@ -4,7 +4,6 @@ import { ThemeProvider } from './theme-provider'
 import { Toaster } from './ui/sonner'
 import { AppHeader } from './app-header'
 import { AppFooter } from './app-footer'
-import { useLocation } from 'react-router'
 
 export function AppLayout({
   children,
@@ -13,19 +12,16 @@ export function AppLayout({
   children: React.ReactNode
   links: { label: string; path: string }[]
 }) {
-  const location = useLocation()
-  const isLandingPage = location.pathname === '/'
-
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <div className="flex flex-col min-h-screen">
-        {!isLandingPage && <AppHeader links={links} />}
-        <main className={`flex-grow ${!isLandingPage ? 'container mx-auto p-4' : ''}`}>
+        <AppHeader links={links} />
+        <main className="flex-grow w-full">
           <ClusterUiChecker>
             {children}
           </ClusterUiChecker>
         </main>
-        {!isLandingPage && <AppFooter />}
+        <AppFooter />
       </div>
       <Toaster closeButton />
     </ThemeProvider>

@@ -6,10 +6,14 @@ This is a React/Vite app containing:
 - [Gill](https://gill.site/) Solana SDK
 - Shadcn [Wallet UI](https://registry.wallet-ui.dev) components
 
-## Getting Started
+## Website
+https://usedeepreal.com
+
+
+## Run it yourself
 
 ### Installation
-
+Download this repo
 
 #### Install Dependencies
 

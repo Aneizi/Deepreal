@@ -131,14 +131,25 @@ export function LandingPage() {
             <Button
               variant="secondary"
               className="font-medium"
+              onClick={() => {
+                const el = document.getElementById('how-it-works');
+                if (el) {
+                  const y = el.getBoundingClientRect().top + window.scrollY + 120; // scroll 120px more
+                  window.scrollTo({ top: y, behavior: 'smooth' });
+                }
+              }}
             >
               How it works
             </Button>
           </div>
         </div>
 
-        {/* Three Cards */}
-        <div className="flex flex-col md:flex-row gap-6 pt-12 w-full mx-auto">
+        {/* How it works section */}
+        <div id="how-it-works" className="pt-[320px] space-y-12">
+          <h2 className="text-2xl md:text-3xl font-bold text-left">How does Deepreal work</h2>
+          
+          {/* Three Cards */}
+          <div className="flex flex-col md:flex-row gap-6 w-full mx-auto">
           <Card className="flex-1 backdrop-blur-xl bg-white/5 dark:bg-black/5 border-white/20 dark:border-white/10 shadow-2xl shadow-purple-500/10">
             <CardHeader className="text-left space-y-8">
               <div className="space-y-2">
@@ -174,6 +185,7 @@ export function LandingPage() {
               </CardDescription>
             </CardHeader>
           </Card>
+        </div>
         </div>
       </div>
     </div>

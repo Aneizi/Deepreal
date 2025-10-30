@@ -4,7 +4,37 @@
     <meta charset="UTF-8" />
     <title>Deepreal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="icon" id="favicon" href="/icon.svg" type="image/svg+xml" />
+    <script>
+      // Update favicon based on browser/system theme preference
+      function updateFavicon() {
+        const favicon = document.getElementById('favicon');
+        if (!favicon) return;
+        
+        // Check if browser/system prefers dark mode
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (prefersDark) {
+          // Browser/Chrome is in dark mode - use original icon
+          favicon.href = '/icon.svg';
+        } else {
+          // Browser/Chrome is in light mode - use light version
+          favicon.href = '/icon-light.svg';
+        }
+      }
+
+      // Wait for DOM to be ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateFavicon);
+      } else {
+        updateFavicon();
+      }
+
+      // Watch for browser theme changes
+      if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateFavicon);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

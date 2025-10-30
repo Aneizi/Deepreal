@@ -58,13 +58,14 @@ function DropzoneWithWallet({ account }: { account: any }) {
   const [postLinks, setPostLinks] = useState<string[]>([''])
   const [firstSignature, setFirstSignature] = useState<string>('')
   const [secondSignature, setSecondSignature] = useState<string>('')
+  const [isDownloaded, setIsDownloaded] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const logoRef = useRef<HTMLImageElement | null>(null)
 
   // Preload logo on mount
   React.useEffect(() => {
     const logo = new Image()
-    logo.src = '/favicon.ico'
+    logo.src = '/icon-light.svg'
     logoRef.current = logo
   }, [])
 
@@ -83,8 +84,9 @@ function DropzoneWithWallet({ account }: { account: any }) {
   const handleStepClick = useCallback((step: number) => {
     setCurrentStep(step)
     if (step === 1) {
-      // Reset to step 1 - clear processed image
+      // Reset to step 1 - clear processed image and download state
       setProcessedImage('')
+      setIsDownloaded(false)
     }
   }, [])
 
@@ -159,19 +161,32 @@ function DropzoneWithWallet({ account }: { account: any }) {
           })
         }
 
-        // Calculate logo size (about 20% of QR code)
-        const logoSize = qrCanvas.width * 0.2
-        const logoX = (qrCanvas.width - logoSize) / 2
-        const logoY = (qrCanvas.height - logoSize) / 2
+        // Calculate logo size (about 20% of QR code) while maintaining aspect ratio
+        const maxLogoSize = qrCanvas.width * 0.2
+        const logoAspectRatio = logoRef.current.width / logoRef.current.height
+        
+        let logoWidth, logoHeight
+        if (logoAspectRatio > 1) {
+          // Wider than tall
+          logoWidth = maxLogoSize
+          logoHeight = maxLogoSize / logoAspectRatio
+        } else {
+          // Taller than wide or square
+          logoHeight = maxLogoSize
+          logoWidth = maxLogoSize * logoAspectRatio
+        }
+        
+        const logoX = (qrCanvas.width - logoWidth) / 2
+        const logoY = (qrCanvas.height - logoHeight) / 2
 
         // Draw white background circle for logo
         qrCtx.fillStyle = '#ffffff'
         qrCtx.beginPath()
-        qrCtx.arc(qrCanvas.width / 2, qrCanvas.height / 2, logoSize * 0.6, 0, 2 * Math.PI)
+        qrCtx.arc(qrCanvas.width / 2, qrCanvas.height / 2, maxLogoSize * 0.6, 0, 2 * Math.PI)
         qrCtx.fill()
 
-        // Draw logo
-        qrCtx.drawImage(logoRef.current, logoX, logoY, logoSize, logoSize)
+        // Draw logo with preserved aspect ratio
+        qrCtx.drawImage(logoRef.current, logoX, logoY, logoWidth, logoHeight)
       }
 
       // Step 3: Overlay QR code on the uploaded image
@@ -497,21 +512,38 @@ function DropzoneWithWallet({ account }: { account: any }) {
                   </div>
                 </Card>
                 <div className="flex flex-col sm:flex-row justify-center gap-4 mt-6">
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                  >
-                    <a href={processedImage} download="image-with-qr.png">
-                      Download file
-                    </a>
-                  </Button>
-                  <Button
-                    onClick={() => setCurrentStep(3)}
-                    className="w-full sm:w-auto"
-                  >
-                    Next
-                  </Button>
+                  {!isDownloaded ? (
+                    <Button
+                      asChild
+                      className="w-full sm:w-auto"
+                    >
+                      <a 
+                        href={processedImage} 
+                        download="image-with-qr.png"
+                        onClick={() => setIsDownloaded(true)}
+                      >
+                        Download file
+                      </a>
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                      >
+                        <a href={processedImage} download="image-with-qr.png">
+                          Download file
+                        </a>
+                      </Button>
+                      <Button
+                        onClick={() => setCurrentStep(3)}
+                        className="w-full sm:w-auto"
+                      >
+                        Next
+                      </Button>
+                    </>
+                  )}
                 </div>
               </>
             )}

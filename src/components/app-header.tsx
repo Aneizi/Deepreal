@@ -10,9 +10,12 @@ export function AppHeader({ links = [] }: { links: { label: string; path: string
   const { pathname } = useLocation()
   const [showMenu, setShowMenu] = useState(false)
 
+  // Suppress unused variable warnings - links and isActive are kept for potential future use
+  void links
   function isActive(path: string) {
     return path === '/' ? pathname === '/' : pathname.startsWith(path)
   }
+  void isActive
 
   return (
     <header className="relative z-50 px-4 bg-card/50">

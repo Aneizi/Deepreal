@@ -59,7 +59,11 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center relative">
-      <div className="absolute inset-0 w-full bg-contain md:bg-cover bg-top bg-no-repeat mix-blend-difference -mt-16 md:mt-0" style={{ backgroundImage: 'url(/Background.png.png)' }} />
+      {/* Desktop background */}
+      <div className="absolute inset-0 w-full bg-cover bg-top bg-no-repeat mix-blend-difference hidden md:block" style={{ backgroundImage: 'url(/Background.png.png)' }} />
+      {/* Mobile/Tablet backgrounds */}
+      <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-contain bg-top bg-right bg-no-repeat mix-blend-difference md:hidden" style={{ backgroundImage: 'url(/mobile1.png)' }} />
+      <div className="absolute left-0 w-1/2 h-1/2 bg-contain bg-top bg-left bg-no-repeat mix-blend-difference md:hidden" style={{ backgroundImage: 'url(/mobile2.png)', top: '500px' }} />
       <div className="text-center space-y-18 w-full max-w-6xl mx-auto relative z-10 px-4 py-[200px]">
         {/* Hero Section with narrower max-width */}
         <div className="max-w-xl mx-auto space-y-16">

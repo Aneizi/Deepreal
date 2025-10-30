@@ -4,10 +4,8 @@ import { AppRoutes } from '@/app-routes.tsx'
 import { NotificationProvider } from '@/components/notification-container.tsx'
 
 const links: { label: string; path: string }[] = [
-  //
-
-  { label: 'Home', path: '/' },
-  { label: 'Sign', path: '/sign' },
+  { label: 'Stamp', path: '/stamp' },
+  { label: 'Verify', path: '/verify' },
 ]
 
 export function App() {

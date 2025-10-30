@@ -60,7 +60,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center relative">
       {/* Desktop background */}
-      <div className="absolute inset-0 w-full bg-cover bg-top bg-no-repeat mix-blend-difference hidden md:block" style={{ backgroundImage: 'url(/Background.png.png)' }} />
+      <div className="absolute inset-0 w-full bg-cover bg-top bg-no-repeat mix-blend-difference hidden md:block" style={{ backgroundImage: 'url(/Background.png)' }} />
       {/* Mobile/Tablet backgrounds */}
       <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-contain bg-top bg-right bg-no-repeat mix-blend-difference md:hidden" style={{ backgroundImage: 'url(/mobile1.png)' }} />
       <div className="absolute left-0 w-1/2 h-1/2 bg-contain bg-top bg-left bg-no-repeat mix-blend-difference md:hidden" style={{ backgroundImage: 'url(/mobile2.png)', top: '500px' }} />

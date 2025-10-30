@@ -4,7 +4,7 @@ import { AppRoutes } from '@/app-routes.tsx'
 import { NotificationProvider } from '@/components/notification-container.tsx'
 
 const links: { label: string; path: string }[] = [
-  { label: 'Stamp', path: '/stamp' },
+  { label: 'Stamp', path: '/upload' },
   { label: 'Verify', path: '/verify' },
 ]
 

@@ -2,6 +2,11 @@ import { createSolanaRpc, getBase58Encoder, type Address } from 'gill'
 import { type VerificationData, MEMO_PROGRAM_ID } from './types'
 
 /**
+ * Utility function to delay execution (for rate limit backoff)
+ */
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+/**
  * Fetches and verifies content registration data from Solana blockchain
  * @param signature - Transaction signature from QR code
  * @returns VerificationData or throws error
@@ -64,18 +69,70 @@ export async function fetchVerificationData(signature: string): Promise<Verifica
 
   // Only fetch signatures that came AFTER the first transaction
   // Using 'until' parameter to stop at the first signature (exclusive)
-  const signaturesResponse = await rpc.getSignaturesForAddress(walletAddress, {
-    until: firstSignature as any,
-    limit: 100
-  }).send()
+  // Limit to 10 to avoid rate limiting - we only need the first matching transaction
+  let signaturesResponse
+  try {
+    signaturesResponse = await rpc.getSignaturesForAddress(walletAddress, {
+      until: firstSignature as any,
+      limit: 10
+    }).send()
+  } catch (error: any) {
+    // Handle rate limit errors
+    if (error?.message?.includes('429')) {
+      console.warn('[VERIFICATION PAGE] Rate limited, waiting and retrying...')
+      await delay(2000)
+      signaturesResponse = await rpc.getSignaturesForAddress(walletAddress, {
+        until: firstSignature as any,
+        limit: 40
+      }).send()
+    } else {
+      throw error
+    }
+  }
 
   console.log('[VERIFICATION PAGE] Fetching signatures after first tx:', signaturesResponse.length, 'transactions')
 
-  // Find ALL transactions that contain the first signature in memo
-  const allRegistrations: Array<{ signature: string; timestamp: string; links: string[] }> = []
+  // Early return if no follow-up transactions exist
+  if (signaturesResponse.length === 0) {
+    console.log('[VERIFICATION PAGE] No transactions after the watermark signature - content is pending')
+    return {
+      isVerified: true,
+      walletAddress,
+      timestamp: blockTime ? new Date(Number(blockTime) * 1000).toISOString() : new Date().toISOString(),
+      socialLinks: [],
+      isPending: true,
+      originalSignature: firstSignature,
+      allRegistrations: []
+    }
+  }
+
+  // Find ONLY the first transaction that contains the first signature in memo
+  let socialLinks: string[] = []
+  let registrationSignature: string | null = null
+  let registrationTimestamp: string | null = null
 
   for (const sig of signaturesResponse) {
-    const txData = await rpc.getTransaction(sig.signature).send()
+    // Add small delay between requests to avoid rate limiting
+    await delay(100)
+
+    let txData
+    try {
+      txData = await rpc.getTransaction(sig.signature).send()
+    } catch (error: any) {
+      if (error?.message?.includes('429')) {
+        console.warn('[VERIFICATION PAGE] Rate limited on transaction fetch, waiting...')
+        await delay(2000)
+        try {
+          txData = await rpc.getTransaction(sig.signature).send()
+        } catch (retryError) {
+          console.error('[VERIFICATION PAGE] Failed to fetch transaction after retry:', retryError)
+          continue
+        }
+      } else {
+        console.error('[VERIFICATION PAGE] Error fetching transaction:', error)
+        continue
+      }
+    }
 
     if (!txData) continue
 
@@ -83,6 +140,7 @@ export async function fetchVerificationData(signature: string): Promise<Verifica
     const txInstructions = txData.transaction.message.instructions
     const txAccountKeys = txData.transaction.message.accountKeys
 
+    let foundMatch = false
     for (const instruction of txInstructions) {
       // Check if this is a memo instruction
       const programId = txAccountKeys[instruction.programIdIndex as number]
@@ -102,18 +160,15 @@ export async function fetchVerificationData(signature: string): Promise<Verifica
           // Extract links from memo
           const parts = memoText.split(' | ')
           if (parts.length > 1) {
-            const links = JSON.parse(parts[1])
+            socialLinks = JSON.parse(parts[1])
+            registrationSignature = sig.signature as string
             const txBlockTime = txData.blockTime
+            registrationTimestamp = txBlockTime ? new Date(Number(txBlockTime) * 1000).toISOString() : new Date().toISOString()
 
-            allRegistrations.push({
-              signature: sig.signature as string,
-              timestamp: txBlockTime ? new Date(Number(txBlockTime) * 1000).toISOString() : new Date().toISOString(),
-              links
-            })
-
-            console.log('[VERIFICATION PAGE] Found registration:', { signature: sig.signature, links })
+            console.log('[VERIFICATION PAGE] Found first registration:', { signature: sig.signature, links: socialLinks })
+            foundMatch = true
+            break
           }
-          break
         }
       } catch (e) {
         // Skip invalid instructions
@@ -121,12 +176,14 @@ export async function fetchVerificationData(signature: string): Promise<Verifica
         continue
       }
     }
+
+    // Stop searching once we find the first match
+    if (foundMatch) {
+      break
+    }
   }
 
-  console.log('[VERIFICATION PAGE] Total registrations found:', allRegistrations.length)
-
-  // Use the most recent registration (first in the array since results are sorted newest first)
-  const socialLinks = allRegistrations.length > 0 ? allRegistrations[0].links : []
+  console.log('[VERIFICATION PAGE] Registration found:', registrationSignature ? 'Yes' : 'No')
 
   return {
     isVerified: true,
@@ -135,6 +192,10 @@ export async function fetchVerificationData(signature: string): Promise<Verifica
     socialLinks,
     isPending: socialLinks.length === 0, // Pending if no social links registered yet
     originalSignature: firstSignature, // Store the first signature for display
-    allRegistrations // Store all registrations for display
+    allRegistrations: registrationSignature ? [{
+      signature: registrationSignature,
+      timestamp: registrationTimestamp!,
+      links: socialLinks
+    }] : [] // Only include the first registration if found
   }
 }

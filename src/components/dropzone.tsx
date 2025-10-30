@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState} from 'react'
+import React, { useCallback, useRef, useState, useEffect} from 'react'
 import QRCode from 'qrcode'
 import { Upload, Trash2, Plus, X, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Stepper } from '@/components/ui/stepper'
 import { useSolana } from '@/components/solana/use-solana.tsx'
-import { LandingPage } from '@/components/landing-page'
+import { useNavigate } from 'react-router'
 import {
   createTransaction,
   signAndSendTransactionMessageWithSigners,
@@ -27,21 +27,21 @@ const steps = [
 export default function Dropzone() {
   const solana = useSolana()
   const account = solana.account
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    // If wallet disconnects, redirect to landing page
+    if (!account) {
+      navigate('/')
+    }
+  }, [account, navigate])
 
   // Check if account exists before trying to use it
   if (!account) {
-    return <LandingPage />
+    return null // Will redirect via useEffect
   }
 
   return <DropzoneWithWallet account={account} />
-}
-
-function DropzoneNoWallet() {
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <p className="text-muted-foreground">Please connect your wallet to continue</p>
-    </div>
-  )
 }
 
 function DropzoneWithWallet({ account }: { account: any }) {

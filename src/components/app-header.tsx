@@ -15,13 +15,14 @@ export function AppHeader({ links = [] }: { links: { label: string; path: string
   }
 
   return (
-    <header className="relative z-50 px-4 py-2 bg-card/50">
+    <header className="relative z-50 px-4 bg-card/50">
       <div className="mx-auto flex justify-between items-center">
-        <div className="flex items-baseline gap-4">
-          <Link to="/" className="text-xl hover:text-neutral-500 dark:hover:text-white">
-            <span>Deepreal</span>
+        <div className="flex items-center gap-4">
+          <Link to="/" className="hover:opacity-80 flex items-center my-4">
+            <img src="/logo.svg" alt="Deepreal" className="h-8 w-auto object-contain brightness-0 dark:brightness-100" />
+            {/* <span>Deepreal</span> */}
           </Link>
-          <div className="hidden md:flex items-center">
+          {/* <div className="hidden md:flex items-center">
             <ul className="flex gap-4 flex-nowrap items-center">
               {links.map(({ label, path }) => (
                 <li key={path}>
@@ -34,7 +35,7 @@ export function AppHeader({ links = [] }: { links: { label: string; path: string
                 </li>
               ))}
             </ul>
-          </div>
+          </div> */}
         </div>
 
         <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setShowMenu(!showMenu)}>
